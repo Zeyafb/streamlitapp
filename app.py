@@ -281,35 +281,35 @@ def main():
             questions = questions_by_part[part_name_tab]
             total_questions = len(questions)
 
-            # Initialize session state for this part
+            # Ensure session state is properly initialized for the current part
             initialize_part_session_state(part_name_tab)
+            
             session_state = st.session_state[part_name_tab]
-
-            if not session_state['show_results']:
+            
+            if not session_state.get('show_results', False):  # Safely access 'show_results' with a default value
                 question = questions[session_state['current_question']]
                 question_number = question['question_number']
                 is_flagged = question_number in session_state['flagged']
                 flag_label = " ⚑" if is_flagged else ""
                 st.subheader(f"Question {question_number} of {total_questions}{flag_label}")
-
+            
                 # Display question map
                 display_question_map(part_name_tab, session_state, total_questions)
-
+            
                 # Display question and get updated selected options
                 selected_options = session_state['answers'].get(question_number, [])
                 new_selected_options = display_question(question, selected_options, part_name_tab, session_state)
                 session_state['answers'][question_number] = new_selected_options
-
+            
                 # Flagging option
-                is_flagged = question_number in session_state['flagged']
                 if st.checkbox("Flag this question", value=is_flagged, key=f"flag_{part_name_tab}_{question_number}"):
                     session_state['flagged'].add(question_number)
                 else:
                     session_state['flagged'].discard(question_number)
-
+            
                 # Navigation controls
                 display_navigation_controls(part_name_tab, session_state, total_questions)
-
+            
                 # Behavior based on mode
                 if st.session_state["mode"] == "Practice Mode":
                     if st.button("Check Answer", key=f"check_{part_name_tab}_{session_state['current_question']}"):
@@ -326,12 +326,10 @@ def main():
                                 st.markdown("**Correct answer(s):**")
                                 for opt in correct_answer:
                                     st.markdown(f"- **{opt}. {question['options'].get(opt, 'Option not found')}**")
-                else:
-                    pass  # No immediate feedback in Exam Mode
-
             else:
                 st.header("Exam Results")
                 display_exam_results(questions, session_state)
+
 
 
 if __name__ == "__main__":

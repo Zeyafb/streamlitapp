@@ -117,7 +117,7 @@ def main():
     st.title("Practice Exam Simulator")
 
     # Handle query parameters using st.experimental_get_query_params
-    query_params = query_params
+    query_params = st.query_params
     part_name = query_params.get("part", [None])[0]
     question_number = query_params.get("question", [None])[0]
     if question_number is not None:

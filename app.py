@@ -106,12 +106,9 @@ def highlight_text(text, search_query):
 
 
 def navigate_to_question(part_name, question_number):
-    """Set query parameters to navigate to a specific question and rerun the app."""
-    st.session_state["current_part"] = part_name
-    st.session_state["current_question"] = question_number
-    st.query_params = {"part": part_name, "question": question_number}
+    """Set query parameters to navigate to a specific question."""
+    st.experimental_set_query_params(part=part_name, question=question_number)
     st.rerun()
-
 
 
 def main():
@@ -119,11 +116,10 @@ def main():
 
     st.title("Practice Exam Simulator")
 
-    # Use st.query_params directly instead of experimental function
-    query_params = st.query_params
+    # Handle query parameters using st.experimental_get_query_params
+    query_params = st.experimental_get_query_params()
     part_name = query_params.get("part", [None])[0]
     question_number = query_params.get("question", [None])[0]
-
     if question_number is not None:
         try:
             question_number = int(question_number)
@@ -158,35 +154,95 @@ def main():
     # Initialize session state for mode
     st.session_state["mode"] = mode
 
-    # Search Functionality
+    # Part selection
+    st.sidebar.header("Part Selection")
+    if part_name not in parts:
+        part_name = parts[0]
+    part_name_tab = st.sidebar.selectbox("Select Part:", parts, index=parts.index(part_name))
+
+    # Initialize navigation if query parameters are present
+    if question_number is not None:
+        if part_name in questions_by_part:
+            if part_name not in st.session_state:
+                st.session_state[part_name] = {
+                    'current_question': question_number - 1,
+                    'answers': {},
+                    'show_results': False,
+                    'flagged': set()
+                }
+            else:
+                st.session_state[part_name]['current_question'] = question_number - 1
+                # Ensure 'flagged' key exists
+                if 'flagged' not in st.session_state[part_name]:
+                    st.session_state[part_name]['flagged'] = set()
+
+    # Add Search Functionality
     st.sidebar.header("Search Questions")
+
+    # Search input
     search_query = st.sidebar.text_input("Enter a keyword or phrase to search:")
     st.session_state["search_query"] = search_query
 
+    # Add "Return to Exam" button in the sidebar
     if search_query:
-        search_results = []
+        if st.sidebar.button("Return to Exam"):
+            st.session_state["search_query"] = ""  # Clear the search query
+            st.session_state.clear()  # Reset session state
+            st.experimental_set_query_params()  # Clear query parameters
+            st.rerun()
+
+    search_results = []
+    total_instances = 0
+
+    if search_query:
+        # Search across all parts
         for part_name_search, questions in questions_by_part.items():
             for question in questions:
-                if search_query.lower() in question['question_text'].lower():
+                # Count occurrences in question text
+                question_text_occurrences = len(re.findall(re.escape(search_query), question['question_text'], re.IGNORECASE))
+                # Count occurrences in options
+                option_occurrences = sum(
+                    len(re.findall(re.escape(search_query), option_text, re.IGNORECASE))
+                    for option_text in question['options'].values()
+                )
+                # Total occurrences in this question
+                occurrences_in_question = question_text_occurrences + option_occurrences
+
+                if occurrences_in_question > 0:
+                    total_instances += occurrences_in_question
+
+                    # Highlight the search query in the question text and options
+                    highlighted_question_text = highlight_text(question['question_text'], search_query)
+                    highlighted_options = {opt_key: highlight_text(opt_text, search_query) for opt_key, opt_text in question['options'].items()}
+
                     search_results.append({
                         'part_name': part_name_search,
                         'question_number': question['question_number'],
-                        'question_text': question['question_text']
+                        'question_text': highlighted_question_text,
+                        'options': highlighted_options
                     })
 
-        if search_results:
-            st.subheader("Search Results")
-            for result in search_results:
-                st.markdown(f"**Part:** {result['part_name']}, **Question {result['question_number']}**")
-                st.markdown(result['question_text'])
+        st.sidebar.write(f"Found {len(search_results)} questions relating to '{search_query}'")
+        st.sidebar.write(f"There are {total_instances} instances of '{search_query}'")
 
-                if st.button(
-                    f"Go to Question {result['question_number']} in {result['part_name']}",
-                    key=f"nav_{result['part_name']}_{result['question_number']}"
-                ):
-                    navigate_to_question(result['part_name'], result['question_number'])
+    if search_results:
+        st.subheader("Search Results")
+        for result in search_results:
+            # Display the part and question number
+            st.markdown(f"**Part:** {result['part_name']}, **Question {result['question_number']}**")
+            st.markdown(result['question_text'], unsafe_allow_html=True)
 
-                st.markdown("---")
+            # Display options
+            for option, option_text in result['options'].items():
+                st.markdown(f"- **{option}**: {option_text}", unsafe_allow_html=True)
+
+            # Add "Go to Question" button
+            if st.button(f"Go to Question {result['question_number']} in {result['part_name']}",
+                         key=f"nav_{result['part_name']}_{result['question_number']}"):
+                # Update session state to navigate to the specific question
+                navigate_to_question(result['part_name'], result['question_number'])
+
+            st.markdown("---")
 
     # Display flagged questions in the sidebar
     st.sidebar.header("Flagged Questions")

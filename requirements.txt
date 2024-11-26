@@ -1,3 +1,4 @@
 streamlit
-pdfminer.six
 pandas
+numpy
+matplotlib

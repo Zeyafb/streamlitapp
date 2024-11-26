@@ -107,17 +107,15 @@ def highlight_text(text, search_query):
 
 def navigate_to_question(part_name, question_number):
     """Set query parameters to navigate to a specific question."""
-    st.experimental_set_query_params(part=part_name, question=question_number)
-    st.experimental_rerun()
+    st.query_params = {'part': part_name, 'question': question_number}
+    st.rerun()
 
 
 def main():
-    st.set_page_config(page_title="Practice Exam Simulator", layout="centered")
-
     st.title("Practice Exam Simulator")
 
-    # Handle query parameters using st.experimental_get_query_params
-    query_params = st.experimental_get_query_params()
+    # Handle query parameters using st.query_params
+    query_params = st.query_params
     part_name = query_params.get("part", [None])[0]
     question_number = query_params.get("question", [None])[0]
     if question_number is not None:
@@ -154,14 +152,8 @@ def main():
     # Initialize session state for mode
     st.session_state["mode"] = mode
 
-    # Part selection
-    st.sidebar.header("Part Selection")
-    if part_name not in parts:
-        part_name = parts[0]
-    part_name_tab = st.sidebar.selectbox("Select Part:", parts, index=parts.index(part_name))
-
     # Initialize navigation if query parameters are present
-    if question_number is not None:
+    if part_name and question_number is not None:
         if part_name in questions_by_part:
             if part_name not in st.session_state:
                 st.session_state[part_name] = {
@@ -188,8 +180,8 @@ def main():
         if st.sidebar.button("Return to Exam"):
             st.session_state["search_query"] = ""  # Clear the search query
             st.session_state.clear()  # Reset session state
-            st.experimental_set_query_params()  # Clear query parameters
-            st.experimental_rerun()
+            st.query_params = {}  # Clear query parameters
+            st.rerun()
 
     search_results = []
     total_instances = 0
@@ -261,180 +253,186 @@ def main():
     if not any_flagged:
         st.sidebar.write("No flagged questions.")
 
-    # Display the selected part
-    st.header(part_name_tab)
-    questions = questions_by_part[part_name_tab]
-    total_questions = len(questions)
+    # Create tabs for each part
+    tabs = st.tabs(parts)
 
-    # Initialize session state for this part
-    if part_name_tab not in st.session_state:
-        st.session_state[part_name_tab] = {
-            'current_question': 0,
-            'answers': {},
-            'show_results': False,
-            'flagged': set()
-        }
-    session_state = st.session_state[part_name_tab]
+    for idx, tab in enumerate(tabs):
+        part_name_tab = parts[idx]
+        with tab:
+            st.header(part_name_tab)
+            questions = questions_by_part[part_name_tab]
+            total_questions = len(questions)
 
-    # Ensure 'flagged' key exists
-    if 'flagged' not in session_state:
-        session_state['flagged'] = set()
+            # Initialize session state for this part
+            if part_name_tab not in st.session_state:
+                st.session_state[part_name_tab] = {
+                    'current_question': 0,
+                    'answers': {},
+                    'show_results': False,
+                    'flagged': set()
+                }
+            session_state = st.session_state[part_name_tab]
 
-    if not session_state['show_results']:
-        question = questions[session_state['current_question']]
-        question_number = question['question_number']
-        is_flagged = question_number in session_state['flagged']
-        flag_label = " ⚑" if is_flagged else ""
-        st.subheader(f"Question {question_number} of {total_questions}{flag_label}")
+            # Ensure 'flagged' key exists
+            if 'flagged' not in session_state:
+                session_state['flagged'] = set()
 
-        # Move Question Map to the top and make it collapsible
-        # Question Map
-        with st.expander("Question Map"):
-            cols = st.columns(5)
-            for i, q_num in enumerate(range(1, total_questions + 1)):
-                col = cols[i % 5]
-                label = f"{q_num}"
-                if q_num in session_state['flagged']:
-                    label += " ⚑"
-                if col.button(label, key=f"qmap_{part_name_tab}_{q_num}"):
-                    session_state['current_question'] = q_num - 1
-                    st.experimental_rerun()
+            if not session_state['show_results']:
+                question = questions[session_state['current_question']]
+                question_number = question['question_number']
+                is_flagged = question_number in session_state['flagged']
+                flag_label = " ⚑" if is_flagged else ""
+                st.subheader(f"Question {question_number} of {total_questions}{flag_label}")
 
-        # Display question text
-        st.write("---")
-        st.write(question['question_text'])
+                # Move Question Map to the top and make it collapsible
+                # Question Map
+                with st.expander("Question Map"):
+                    cols = st.columns(10)
+                    for i, q_num in enumerate(range(1, total_questions + 1)):
+                        col = cols[i % 10]
+                        label = f"{q_num}"
+                        if q_num in session_state['flagged']:
+                            label += " ⚑"
+                        if col.button(label, key=f"qmap_{part_name_tab}_{q_num}"):
+                            session_state['current_question'] = q_num - 1
+                            st.rerun()
 
-        options = question['options']
-        option_keys = list(options.keys())
+                # Display question text
+                st.write("---")
+                st.write(question['question_text'])
 
-        # Determine if multiple answers are required
-        correct_answer = question.get('correct_answer', [])
-        num_correct = len(correct_answer)
-        if num_correct > 1:
-            st.info(f"This question requires selecting {num_correct} answers.")
-            # Use checkboxes for multiple selection
-            selected_options = []
-            for key in option_keys:
-                checkbox_id = f"{part_name_tab}_{session_state['current_question']}_{key}"
-                checked = key in session_state['answers'].get(question_number, [])
-                if st.checkbox(f"{key}. {options[key]}", key=checkbox_id, value=checked):
-                    selected_options.append(key)
+                options = question['options']
+                option_keys = list(options.keys())
+
+                # Determine if multiple answers are required
+                correct_answer = question.get('correct_answer', [])
+                num_correct = len(correct_answer)
+                if num_correct > 1:
+                    st.info(f"This question requires selecting {num_correct} answers.")
+                    # Use checkboxes for multiple selection
+                    selected_options = []
+                    for key in option_keys:
+                        checkbox_id = f"{part_name_tab}_{session_state['current_question']}_{key}"
+                        checked = key in session_state['answers'].get(question_number, [])
+                        if st.checkbox(f"{key}. {options[key]}", key=checkbox_id, value=checked):
+                            selected_options.append(key)
+                        else:
+                            # Ensure options are removed if unchecked
+                            if key in selected_options:
+                                selected_options.remove(key)
+                    # Save the selected options
+                    session_state['answers'][question_number] = selected_options
                 else:
-                    # Ensure options are removed if unchecked
-                    if key in selected_options:
-                        selected_options.remove(key)
-            # Save the selected options
-            session_state['answers'][question_number] = selected_options
-        else:
-            st.info("This question requires selecting 1 answer.")
-            # Use radio buttons for single selection
-            radio_id = f"{part_name_tab}_{session_state['current_question']}"
-            previous_selection = session_state['answers'].get(question_number, [])
-            if previous_selection and previous_selection[0] in option_keys:
-                index = option_keys.index(previous_selection[0])
-            else:
-                index = 0
-            selected_option = st.radio(
-                "Select your answer:",
-                [f"{key}. {options[key]}" for key in option_keys],
-                index=index,
-                key=radio_id
-            )
-            selected_letter = selected_option.split('.')[0]
-            # Save the selected option
-            session_state['answers'][question_number] = [selected_letter]
-
-        # Flagging option
-        is_flagged = question_number in session_state['flagged']
-        if st.checkbox("Flag this question", value=is_flagged, key=f"flag_{part_name_tab}_{question_number}"):
-            # Add question to flagged set
-            session_state['flagged'].add(question_number)
-        else:
-            # Remove question from flagged set if it was flagged
-            session_state['flagged'].discard(question_number)
-
-        # Navigation controls
-        st.write("---")
-        # Stack navigation buttons vertically for mobile-friendliness
-        if st.button("Previous", key=f"prev_{part_name_tab}_{session_state['current_question']}"):
-            if session_state['current_question'] > 0:
-                session_state['current_question'] -= 1
-                st.experimental_rerun()
-        if st.button("Next", key=f"next_{part_name_tab}_{session_state['current_question']}"):
-            if session_state['current_question'] < total_questions - 1:
-                session_state['current_question'] += 1
-                st.experimental_rerun()
-        if st.button("Submit Exam", key=f"submit_{part_name_tab}"):
-            session_state['show_results'] = True
-            st.experimental_rerun()
-
-        # Behavior based on mode
-        if st.session_state["mode"] == "Practice Mode":
-            # "Check Answer" button
-            if st.button("Check Answer", key=f"check_{part_name_tab}_{session_state['current_question']}"):
-                selected_options = session_state['answers'][question_number]
-                if len(selected_options) != num_correct:
-                    st.warning(f"Please select exactly {num_correct} answer(s) before checking.")
-                else:
-                    # Check if the selected options match the correct answers
-                    if set(selected_options) == set(correct_answer):
-                        st.success("Correct!")
+                    st.info("This question requires selecting 1 answer.")
+                    # Use radio buttons for single selection
+                    radio_id = f"{part_name_tab}_{session_state['current_question']}"
+                    previous_selection = session_state['answers'].get(question_number, [])
+                    if previous_selection and previous_selection[0] in option_keys:
+                        index = option_keys.index(previous_selection[0])
                     else:
-                        st.error("Incorrect.")
-                        st.markdown("**Correct answer(s):**")
-                        for opt in correct_answer:
-                            st.markdown(f"- **{opt}. {options.get(opt, 'Option not found')}**")
-        else:
-            # Exam Mode: Do not show immediate feedback
-            pass  # No immediate feedback in Exam Mode
+                        index = 0
+                    selected_option = st.radio(
+                        "Select your answer:",
+                        [f"{key}. {options[key]}" for key in option_keys],
+                        index=index,
+                        key=radio_id
+                    )
+                    selected_letter = selected_option.split('.')[0]
+                    # Save the selected option
+                    session_state['answers'][question_number] = [selected_letter]
 
-    else:
-        st.header("Exam Results")
-
-        correct_answers_count = 0
-        for idx_q, question in enumerate(questions):
-            question_number = question['question_number']
-            st.subheader(f"Question {question_number}")
-            st.write(question['question_text'])
-
-            options = question['options']
-            selected_options = session_state['answers'].get(question_number, [])
-            correct_options = question.get('correct_answer', [])
-            is_correct = set(selected_options) == set(correct_options)
-
-            # Display user's answer
-            if selected_options:
-                selected_display = ', '.join([f"{opt}. {options.get(opt, '')}" for opt in selected_options])
-                if is_correct:
-                    st.success(f"Your answer: {selected_display}")
+                # Flagging option
+                is_flagged = question_number in session_state['flagged']
+                if st.checkbox("Flag this question", value=is_flagged, key=f"flag_{part_name_tab}_{question_number}"):
+                    # Add question to flagged set
+                    session_state['flagged'].add(question_number)
                 else:
-                    st.error(f"Your answer: {selected_display}")
-                    st.markdown("**Correct answer(s):**")
-                    for opt in correct_options:
-                        st.markdown(f"- **{opt}. {options.get(opt, 'Option not found')}**")
+                    # Remove question from flagged set if it was flagged
+                    session_state['flagged'].discard(question_number)
+
+                # Navigation controls
+                st.write("---")
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    if st.button("Previous", key=f"prev_{part_name_tab}_{session_state['current_question']}"):
+                        if session_state['current_question'] > 0:
+                            session_state['current_question'] -= 1
+                            st.rerun()
+                with col2:
+                    if st.button("Next", key=f"next_{part_name_tab}_{session_state['current_question']}"):
+                        if session_state['current_question'] < total_questions - 1:
+                            session_state['current_question'] += 1
+                            st.rerun()
+                with col3:
+                    if st.button("Submit Exam", key=f"submit_{part_name_tab}"):
+                        session_state['show_results'] = True
+                        st.rerun()
+
+                # Behavior based on mode
+                if st.session_state["mode"] == "Practice Mode":
+                    # "Check Answer" button
+                    if st.button("Check Answer", key=f"check_{part_name_tab}_{session_state['current_question']}"):
+                        selected_options = session_state['answers'][question_number]
+                        if len(selected_options) != num_correct:
+                            st.warning(f"Please select exactly {num_correct} answer(s) before checking.")
+                        else:
+                            # Check if the selected options match the correct answers
+                            if set(selected_options) == set(correct_answer):
+                                st.success("Correct!")
+                            else:
+                                st.error("Incorrect.")
+                                st.markdown("**Correct answer(s):**")
+                                for opt in correct_answer:
+                                    st.markdown(f"- **{opt}. {options.get(opt, 'Option not found')}**")
+                else:
+                    # Exam Mode: Do not show immediate feedback
+                    pass  # No immediate feedback in Exam Mode
+
             else:
-                st.warning("Your answer: No answer selected")
-                if correct_options:
-                    st.markdown("**Correct answer(s):**")
-                    for opt in correct_options:
-                        st.markdown(f"- **{opt}. {options.get(opt, 'Option not found')}**")
+                st.header("Exam Results")
 
-            if is_correct:
-                correct_answers_count += 1
+                correct_answers_count = 0
+                for idx_q, question in enumerate(questions):
+                    question_number = question['question_number']
+                    st.subheader(f"Question {question_number}")
+                    st.write(question['question_text'])
 
-        # Display total score
-        percentage_score = (correct_answers_count / total_questions) * 100
-        st.write(f"Your total score: {correct_answers_count} out of {total_questions} ({percentage_score:.2f}%)")
+                    options = question['options']
+                    selected_options = session_state['answers'].get(question_number, [])
+                    correct_options = question.get('correct_answer', [])
+                    is_correct = set(selected_options) == set(correct_options)
 
-        if st.button("Retake Exam", key=f"retake_{part_name_tab}"):
-            session_state['current_question'] = 0
-            session_state['answers'] = {}
-            session_state['show_results'] = False
-            session_state['flagged'] = set()
-            st.experimental_rerun()
+                    # Display user's answer
+                    if selected_options:
+                        selected_display = ', '.join([f"{opt}. {options.get(opt, '')}" for opt in selected_options])
+                        if is_correct:
+                            st.success(f"Your answer: {selected_display}")
+                        else:
+                            st.error(f"Your answer: {selected_display}")
+                            st.markdown("**Correct answer(s):**")
+                            for opt in correct_options:
+                                st.markdown(f"- **{opt}. {options.get(opt, 'Option not found')}**")
+                    else:
+                        st.warning("Your answer: No answer selected")
+                        if correct_options:
+                            st.markdown("**Correct answer(s):**")
+                            for opt in correct_options:
+                                st.markdown(f"- **{opt}. {options.get(opt, 'Option not found')}**")
 
-    st.write(f"Streamlit version: {st.__version__}")
+                    if is_correct:
+                        correct_answers_count += 1
 
+                # Display total score
+                percentage_score = (correct_answers_count / total_questions) * 100
+                st.write(f"Your total score: {correct_answers_count} out of {total_questions} ({percentage_score:.2f}%)")
 
+                if st.button("Retake Exam", key=f"retake_{part_name_tab}"):
+                    session_state['current_question'] = 0
+                    session_state['answers'] = {}
+                    session_state['show_results'] = False
+                    session_state['flagged'] = set()
+                    st.rerun()
+
+    st.write(st.__version__)
 if __name__ == "__main__":
     main()

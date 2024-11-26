@@ -106,9 +106,12 @@ def highlight_text(text, search_query):
 
 
 def navigate_to_question(part_name, question_number):
-    """Set query parameters to navigate to a specific question."""
-    st.experimental_set_query_params(part=part_name, question=question_number)
+    """Set query parameters to navigate to a specific question and rerun the app."""
+    st.session_state["current_part"] = part_name
+    st.session_state["current_question"] = question_number
+    st.query_params = {"part": part_name, "question": question_number}
     st.rerun()
+
 
 
 def main():
@@ -231,18 +234,20 @@ def main():
             # Display the part and question number
             st.markdown(f"**Part:** {result['part_name']}, **Question {result['question_number']}**")
             st.markdown(result['question_text'], unsafe_allow_html=True)
-
+    
             # Display options
             for option, option_text in result['options'].items():
                 st.markdown(f"- **{option}**: {option_text}", unsafe_allow_html=True)
-
+    
             # Add "Go to Question" button
-            if st.button(f"Go to Question {result['question_number']} in {result['part_name']}",
-                         key=f"nav_{result['part_name']}_{result['question_number']}"):
-                # Update session state to navigate to the specific question
+            if st.button(
+                f"Go to Question {result['question_number']} in {result['part_name']}",
+                key=f"nav_{result['part_name']}_{result['question_number']}"
+            ):
                 navigate_to_question(result['part_name'], result['question_number'])
-
+    
             st.markdown("---")
+
 
     # Display flagged questions in the sidebar
     st.sidebar.header("Flagged Questions")

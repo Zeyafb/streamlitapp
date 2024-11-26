@@ -19,7 +19,7 @@ def highlight_text(text, search_query):
 def navigate_to_question(part_name, question_number):
     """Sets query parameters to navigate to a specific question."""
     st.experimental_set_query_params(part=part_name, question=question_number)
-    st.experimental_rerun()
+    st.rerun()
 
 
 def initialize_part_session_state(part_name, question_number=None):
@@ -84,16 +84,16 @@ def display_navigation_controls(part_name, session_state, total_questions):
         if st.button("Previous", key=f"prev_{part_name}_{session_state['current_question']}"):
             if session_state['current_question'] > 0:
                 session_state['current_question'] -= 1
-                st.experimental_rerun()
+                st.rerun()
     with col2:
         if st.button("Next", key=f"next_{part_name}_{session_state['current_question']}"):
             if session_state['current_question'] < total_questions - 1:
                 session_state['current_question'] += 1
-                st.experimental_rerun()
+                st.rerun()
     with col3:
         if st.button("Submit Exam", key=f"submit_{part_name}"):
             session_state['show_results'] = True
-            st.experimental_rerun()
+            st.rerun()
 
 
 def display_question_map(part_name, session_state, total_questions):
@@ -107,7 +107,7 @@ def display_question_map(part_name, session_state, total_questions):
                 label += " ⚑"
             if col.button(label, key=f"qmap_{part_name}_{q_num}"):
                 session_state['current_question'] = q_num - 1
-                st.experimental_rerun()
+                st.rerun()
 
 
 def display_exam_results(questions, session_state):
@@ -151,7 +151,7 @@ def display_exam_results(questions, session_state):
         session_state['answers'] = {}
         session_state['show_results'] = False
         session_state['flagged'] = set()
-        st.experimental_rerun()
+        st.rerun()
 
 
 def main():
@@ -209,7 +209,7 @@ def main():
         if st.sidebar.button("Return to Exam"):
             st.session_state["search_query"] = ""
             st.experimental_set_query_params()
-            st.experimental_rerun()
+            st.rerun()
 
     search_results = []
     total_instances = 0

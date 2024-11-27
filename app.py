@@ -253,16 +253,20 @@ def main():
         st.subheader("Search Results")
         for result in search_results:
             st.markdown(f"**Part:** {result['part_name']}, **Question {result['question_number']}**")
+            
+            # Highlight the question text
             st.markdown(result['question_text'], unsafe_allow_html=True)
-
+    
+            # Highlight options
             for option, option_text in result['options'].items():
                 st.markdown(f"- **{option}**: {option_text}", unsafe_allow_html=True)
-
+    
             if st.button(f"Go to Question {result['question_number']} in {result['part_name']}",
                          key=f"nav_{result['part_name']}_{result['question_number']}"):
                 navigate_to_question(result['part_name'], result['question_number'])
-
+    
             st.markdown("---")
+
 
     # Display flagged questions
     st.sidebar.header("Flagged Questions")

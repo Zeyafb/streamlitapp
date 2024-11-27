@@ -15,16 +15,6 @@ def highlight_text(text, search_query):
     )
     return highlighted_text
 
-def highlight_text(text, search_query):
-    """Highlights the search query within the given text."""
-    escaped_query = re.escape(search_query)
-    highlighted_text = re.sub(
-        f"({escaped_query})",
-        r"<span style='background-color: #f3f3f3; color: #333; padding: 2px; border-radius: 4px;'>\1</span>",
-        text,
-        flags=re.IGNORECASE
-    )
-    return highlighted_text
 
 def navigate_to_question(part_name, question_number):
     """Sets query parameters to navigate to a specific question."""
@@ -49,21 +39,13 @@ def initialize_part_session_state(part_name, question_number=None):
 
 
 def display_question(question, selected_options, part_name, session_state):
-    """Displays the question and options, with optional search query highlighting."""
+    """Displays the question and options, and returns updated selected options."""
     st.write("---")
-    
-    # Check if there is an active search query
-    search_query = st.session_state.get("search_query", "")
-    
-    # Highlight the question text
-    question_text = question['question_text']
-    if search_query:
-        question_text = highlight_text(question_text, search_query)
-    st.markdown(question_text, unsafe_allow_html=True)
+    st.write(question['question_text'])
 
-    # Display options with highlighting
     options = question['options']
     option_keys = list(options.keys())
+
     correct_answer = question.get('correct_answer', [])
     num_correct = len(correct_answer)
 
@@ -72,17 +54,14 @@ def display_question(question, selected_options, part_name, session_state):
         new_selected_options = []
         for key in option_keys:
             checkbox_id = f"{part_name}_{session_state['current_question']}_{key}"
-            option_text = options[key]
-            if search_query:
-                option_text = highlight_text(option_text, search_query)
             checked = key in selected_options
-            if st.checkbox(f"{key}. {option_text}", key=checkbox_id, value=checked):
+            if st.checkbox(f"{key}. {options[key]}", key=checkbox_id, value=checked):
                 new_selected_options.append(key)
         return new_selected_options
     else:
         st.info("This question requires selecting 1 answer.")
         radio_id = f"{part_name}_{session_state['current_question']}"
-        options_list = [f"{key}. {highlight_text(options[key], search_query) if search_query else options[key]}" for key in option_keys]
+        options_list = [f"{key}. {options[key]}" for key in option_keys]
         if selected_options and selected_options[0] in option_keys:
             index = option_keys.index(selected_options[0])
         else:
@@ -95,7 +74,6 @@ def display_question(question, selected_options, part_name, session_state):
         )
         selected_letter = selected_option.split('.')[0]
         return [selected_letter]
-
 
 
 def display_navigation_controls(part_name, session_state, total_questions):
@@ -222,11 +200,10 @@ def main():
         for part in parts:
             initialize_part_session_state(part)
 
-    # Search functionality in the sidebar
+    # Search functionality
     st.sidebar.header("Search Questions")
     search_query = st.sidebar.text_input("Enter a keyword or phrase to search:")
     st.session_state["search_query"] = search_query
-
 
     if search_query:
         if st.sidebar.button("Return to Exam"):
@@ -266,20 +243,16 @@ def main():
         st.subheader("Search Results")
         for result in search_results:
             st.markdown(f"**Part:** {result['part_name']}, **Question {result['question_number']}**")
-            
-            # Highlight the question text
             st.markdown(result['question_text'], unsafe_allow_html=True)
-    
-            # Highlight options
+
             for option, option_text in result['options'].items():
                 st.markdown(f"- **{option}**: {option_text}", unsafe_allow_html=True)
-    
+
             if st.button(f"Go to Question {result['question_number']} in {result['part_name']}",
                          key=f"nav_{result['part_name']}_{result['question_number']}"):
                 navigate_to_question(result['part_name'], result['question_number'])
-    
-            st.markdown("---")
 
+            st.markdown("---")
 
     # Display flagged questions
     st.sidebar.header("Flagged Questions")

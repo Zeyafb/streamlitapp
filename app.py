@@ -67,7 +67,7 @@ def display_question(question, selected_options, part_name, session_state):
         if new_phrase:
             if new_phrase not in highlighted_phrases:
                 highlighted_phrases.append(new_phrase)
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.warning("Phrase is already highlighted.")
     
@@ -79,7 +79,7 @@ def display_question(question, selected_options, part_name, session_state):
             with cols[idx]:
                 if st.button(f"❌ {phrase}", key=f"remove_highlight_{part_name}_{question_number}_{phrase}"):
                     highlighted_phrases.remove(phrase)
-                    st.experimental_rerun()
+                    st.rerun()
     
     # Highlight the phrases in the question text
     question_text = question['question_text']

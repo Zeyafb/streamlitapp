@@ -104,18 +104,18 @@ def display_navigation_controls(part_name, session_state, total_questions):
         if st.button("Previous", key=f"prev_{part_name}_{session_state['current_question']}"):
             if session_state['current_question'] > 0:
                 session_state['current_question'] -= 1
-                st.rerun()
+                st.()
 
     with col2:
         if st.button("Next", key=f"next_{part_name}_{session_state['current_question']}"):
             if session_state['current_question'] < total_questions - 1:
                 session_state['current_question'] += 1
-                st.rerun()
+                st.()
 
     with col3:
         if st.button("Submit Exam", key=f"submit_{part_name}"):
             session_state['show_results'] = True
-            st.rerun()
+            st.()
 
 
 
@@ -128,7 +128,7 @@ def display_question_map(session_state, total_questions):
             label = f"{q_num}"
             if col.button(label, key=f"qmap_{q_num}"):
                 session_state['current_question'] = q_num - 1
-                st.rerun
+                st.
 
 
 def display_exam_results(questions, session_state):
@@ -171,7 +171,7 @@ def display_exam_results(questions, session_state):
         session_state['current_question'] = 0
         session_state['answers'] = {}
         session_state['show_results'] = False
-        st.rerun
+        st.
 
 
 def main():
@@ -218,8 +218,9 @@ def main():
     selected_part = st.sidebar.selectbox("Choose a part:", parts)
     part_name = selected_part
 
-    # Initialize session state for navigation
-    st.rerun(part_name, question_number)
+    if part_name and question_number is not None:
+        st.experimental_set_query_params(part=part_name, question=question_number)
+        st.rerun()
 
     session_state = st.session_state[part_name]
 

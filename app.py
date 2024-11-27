@@ -23,7 +23,7 @@ def highlight_text(text, phrases):
 def navigate_to_question(part_name, question_number):
     """Sets query parameters to navigate to a specific question."""
     st.experimental_set_query_params(part=part_name, question=question_number)
-    st.rerun()
+    st.st.rerun()
 
 
 def initialize_part_session_state(part_name, question_number=None):
@@ -103,16 +103,16 @@ def display_navigation_controls(part_name, session_state, total_questions):
         if st.button("Previous", key=f"prev_{part_name}_{session_state['current_question']}"):
             if session_state['current_question'] > 0:
                 session_state['current_question'] -= 1
-                st.rerun()
+                st.()
     with col2:
         if st.button("Next", key=f"next_{part_name}_{session_state['current_question']}"):
             if session_state['current_question'] < total_questions - 1:
                 session_state['current_question'] += 1
-                st.rerun()
+                st.()
     with col3:
         if st.button("Submit Exam", key=f"submit_{part_name}"):
             session_state['show_results'] = True
-            st.rerun()
+            st.()
 
 
 def display_question_map(session_state, total_questions):
@@ -124,7 +124,7 @@ def display_question_map(session_state, total_questions):
             label = f"{q_num}"
             if col.button(label, key=f"qmap_{q_num}"):
                 session_state['current_question'] = q_num - 1
-                st.rerun()
+                st.()
 
 
 def display_exam_results(questions, session_state):
@@ -167,7 +167,7 @@ def display_exam_results(questions, session_state):
         session_state['current_question'] = 0
         session_state['answers'] = {}
         session_state['show_results'] = False
-        st.rerun()
+        st.()
 
 
 def main():
@@ -215,7 +215,7 @@ def main():
     part_name = selected_part
 
     # Initialize session state for navigation
-    rerun(part_name, question_number)
+    st.rerun(part_name, question_number)
 
     session_state = st.session_state[part_name]
 
@@ -230,7 +230,7 @@ def main():
         if new_phrase:
             if new_phrase not in highlighted_phrases:
                 highlighted_phrases.append(new_phrase)
-                st.rerun()
+                st.st.rerun()
             else:
                 st.sidebar.warning("Phrase is already highlighted.")
 
@@ -239,7 +239,7 @@ def main():
         for phrase in highlighted_phrases:
             if st.sidebar.button(f"Remove '{phrase}'", key=f"remove_{phrase}"):
                 highlighted_phrases.remove(phrase)
-                st.rerun()
+                st.st.rerun()
 
     # Search functionality
     st.sidebar.header("Search Questions")
@@ -250,7 +250,7 @@ def main():
         if st.sidebar.button("Return to Exam"):
             st.session_state["search_query"] = ""
             st.experimental_set_query_params()
-            st.rerun()
+            st.st.rerun()
 
     search_results = []
     total_instances = 0

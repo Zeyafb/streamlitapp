@@ -20,7 +20,6 @@ def highlight_text(text, phrases):
     return highlighted_text
 
 
-
 def navigate_to_question(part_name, question_number):
     """Sets query parameters to navigate to a specific question."""
     st.experimental_set_query_params(part=part_name, question=question_number)
@@ -34,59 +33,24 @@ def initialize_part_session_state(part_name, question_number=None):
             'current_question': 0 if question_number is None else question_number - 1,
             'answers': {},
             'show_results': False,
-            'flagged': set(),
-            'highlighted_phrases': {}
+            # Removed 'flagged' and 'highlighted_phrases'
         }
     else:
         if question_number is not None:
             st.session_state[part_name]['current_question'] = question_number - 1
-        if 'flagged' not in st.session_state[part_name]:
-            st.session_state[part_name]['flagged'] = set()
-        if 'highlighted_phrases' not in st.session_state[part_name]:
-            st.session_state[part_name]['highlighted_phrases'] = {}
+        # No need to initialize 'flagged' and 'highlighted_phrases'
 
 
-
-def display_question(question, selected_options, part_name, session_state):
+def display_question(question, selected_options, highlighted_phrases):
     """Displays the question and options, and returns updated selected options."""
     st.write("---")
-    
-    question_number = question['question_number']
-    
-    # Initialize highlighted phrases for this question if not already done
-    if 'highlighted_phrases' not in session_state:
-        session_state['highlighted_phrases'] = {}
-    if question_number not in session_state['highlighted_phrases']:
-        session_state['highlighted_phrases'][question_number] = []
-    
-    highlighted_phrases = session_state['highlighted_phrases'][question_number]
-    
-    # Input for adding new phrases to highlight
-    new_phrase = st.text_input("Enter a phrase to highlight:", key=f"highlight_input_{part_name}_{question_number}")
-    if st.button("Add Highlight", key=f"add_highlight_{part_name}_{question_number}"):
-        if new_phrase:
-            if new_phrase not in highlighted_phrases:
-                highlighted_phrases.append(new_phrase)
-                st.rerun()
-            else:
-                st.warning("Phrase is already highlighted.")
-    
-    # Display current highlighted phrases
-    if highlighted_phrases:
-        st.write("Highlighted phrases:")
-        cols = st.columns(len(highlighted_phrases))
-        for idx, phrase in enumerate(highlighted_phrases):
-            with cols[idx]:
-                if st.button(f"❌ {phrase}", key=f"remove_highlight_{part_name}_{question_number}_{phrase}"):
-                    highlighted_phrases.remove(phrase)
-                    st.rerun()
     
     # Highlight the phrases in the question text
     question_text = question['question_text']
     question_text = highlight_text(question_text, highlighted_phrases)
     st.markdown(question_text, unsafe_allow_html=True)
     
-    # Display the options as before
+    # Display the options
     options = question['options']
     option_keys = list(options.keys())
     correct_answer = question.get('correct_answer', [])
@@ -96,15 +60,18 @@ def display_question(question, selected_options, part_name, session_state):
         st.info(f"This question requires selecting {num_correct} answers.")
         new_selected_options = []
         for key in option_keys:
-            checkbox_id = f"{part_name}_{session_state['current_question']}_{key}"
+            checkbox_id = f"{question['question_number']}_{key}"
             checked = key in selected_options
-            if st.checkbox(f"{key}. {options[key]}", key=checkbox_id, value=checked):
+            option_text = options[key]
+            option_text = highlight_text(f"{key}. {option_text}", highlighted_phrases)
+            if st.checkbox(option_text, key=checkbox_id, value=checked):
                 new_selected_options.append(key)
         return new_selected_options
     else:
         st.info("This question requires selecting 1 answer.")
-        radio_id = f"{part_name}_{session_state['current_question']}"
+        radio_id = f"{question['question_number']}"
         options_list = [f"{key}. {options[key]}" for key in option_keys]
+        options_list = [highlight_text(opt, highlighted_phrases) for opt in options_list]
         if selected_options and selected_options[0] in option_keys:
             index = option_keys.index(selected_options[0])
         else:
@@ -115,9 +82,9 @@ def display_question(question, selected_options, part_name, session_state):
             index=index,
             key=radio_id
         )
-        selected_letter = selected_option.split('.')[0]
+        # Remove HTML tags to get the selected letter
+        selected_letter = re.sub('<[^<]+?>', '', selected_option).split('.')[0]
         return [selected_letter]
-
 
 
 def display_navigation_controls(part_name, session_state, total_questions):
@@ -140,16 +107,14 @@ def display_navigation_controls(part_name, session_state, total_questions):
             st.rerun()
 
 
-def display_question_map(part_name, session_state, total_questions):
+def display_question_map(session_state, total_questions):
     """Displays a collapsible question map."""
     with st.expander("Question Map"):
         cols = st.columns(10)
         for i, q_num in enumerate(range(1, total_questions + 1)):
             col = cols[i % 10]
             label = f"{q_num}"
-            if q_num in session_state['flagged']:
-                label += " ⚑"
-            if col.button(label, key=f"qmap_{part_name}_{q_num}"):
+            if col.button(label, key=f"qmap_{q_num}"):
                 session_state['current_question'] = q_num - 1
                 st.rerun()
 
@@ -194,10 +159,7 @@ def display_exam_results(questions, session_state):
         session_state['current_question'] = 0
         session_state['answers'] = {}
         session_state['show_results'] = False
-        session_state['flagged'] = set()
-        session_state['highlighted_phrases'] = {}
         st.rerun()
-
 
 
 def main():
@@ -236,15 +198,40 @@ def main():
 
     # Mode selection
     st.sidebar.header("Mode Selection")
-    mode = st.sidebar.radio("Select Mode:", ("Exam Mode", "Practice Mode"))
+    mode = st.sidebar.radio("Select Mode:", ("Exam Mode", "Practice Mode"), index=1)
     st.session_state["mode"] = mode
 
+    # Part selection
+    st.sidebar.header("Select Part")
+    selected_part = st.sidebar.selectbox("Choose a part:", parts)
+    part_name = selected_part
+
     # Initialize session state for navigation
-    if part_name and question_number is not None:
-        initialize_part_session_state(part_name, question_number)
-    else:
-        for part in parts:
-            initialize_part_session_state(part)
+    initialize_part_session_state(part_name, question_number)
+
+    session_state = st.session_state[part_name]
+
+    # Highlighted phrases management in sidebar
+    st.sidebar.header("Highlight Phrases")
+    if 'highlighted_phrases' not in st.session_state:
+        st.session_state['highlighted_phrases'] = []
+    highlighted_phrases = st.session_state['highlighted_phrases']
+
+    new_phrase = st.sidebar.text_input("Enter a phrase to highlight:")
+    if st.sidebar.button("Add Highlight"):
+        if new_phrase:
+            if new_phrase not in highlighted_phrases:
+                highlighted_phrases.append(new_phrase)
+                st.experimental_rerun()
+            else:
+                st.sidebar.warning("Phrase is already highlighted.")
+
+    if highlighted_phrases:
+        st.sidebar.write("Highlighted phrases:")
+        for phrase in highlighted_phrases:
+            if st.sidebar.button(f"Remove '{phrase}'", key=f"remove_{phrase}"):
+                highlighted_phrases.remove(phrase)
+                st.experimental_rerun()
 
     # Search functionality
     st.sidebar.header("Search Questions")
@@ -272,8 +259,8 @@ def main():
 
                 if occurrences_in_question > 0:
                     total_instances += occurrences_in_question
-                    highlighted_question_text = highlight_text(question['question_text'], search_query)
-                    highlighted_options = {opt_key: highlight_text(opt_text, search_query) for opt_key, opt_text in question['options'].items()}
+                    highlighted_question_text = highlight_text(question['question_text'], [search_query])
+                    highlighted_options = {opt_key: highlight_text(opt_text, [search_query]) for opt_key, opt_text in question['options'].items()}
 
                     search_results.append({
                         'part_name': part_name_search,
@@ -299,83 +286,47 @@ def main():
                 navigate_to_question(result['part_name'], result['question_number'])
 
             st.markdown("---")
+    else:
+        # Display the exam interface
+        st.header(part_name)
+        questions = questions_by_part[part_name]
+        total_questions = len(questions)
 
-    # Display flagged questions
-    st.sidebar.header("Flagged Questions")
-    any_flagged = False
-    for part in parts:
-        session_state_part = st.session_state.get(part, {})
-        if 'flagged' not in session_state_part:
-            session_state_part['flagged'] = set()
-        flagged = session_state_part.get('flagged', set())
-        if flagged:
-            any_flagged = True
-            st.sidebar.write(f"**{part}:**")
-            for fq in sorted(flagged):
-                if st.sidebar.button(f"Go to {part} Q{fq}", key=f"sidebar_flagged_{part}_{fq}"):
-                    navigate_to_question(part, fq)
-    if not any_flagged:
-        st.sidebar.write("No flagged questions.")
+        if not session_state.get('show_results', False):  # Safely access 'show_results' with a default value
+            question = questions[session_state['current_question']]
+            question_number = question['question_number']
+            st.subheader(f"Question {question_number} of {total_questions}")
 
-    # Create tabs for each part
-    tabs = st.tabs(parts)
+            # Display question map
+            display_question_map(session_state, total_questions)
 
-    for idx, tab in enumerate(tabs):
-        part_name_tab = parts[idx]
-        with tab:
-            st.header(part_name_tab)
-            questions = questions_by_part[part_name_tab]
-            total_questions = len(questions)
+            # Display question and get updated selected options
+            selected_options = session_state['answers'].get(question_number, [])
+            new_selected_options = display_question(question, selected_options, st.session_state['highlighted_phrases'])
+            session_state['answers'][question_number] = new_selected_options
 
-            # Ensure session state is properly initialized for the current part
-            initialize_part_session_state(part_name_tab)
-            
-            session_state = st.session_state[part_name_tab]
-            
-            if not session_state.get('show_results', False):  # Safely access 'show_results' with a default value
-                question = questions[session_state['current_question']]
-                question_number = question['question_number']
-                is_flagged = question_number in session_state['flagged']
-                flag_label = " ⚑" if is_flagged else ""
-                st.subheader(f"Question {question_number} of {total_questions}{flag_label}")
-            
-                # Display question map
-                display_question_map(part_name_tab, session_state, total_questions)
-            
-                # Display question and get updated selected options
-                selected_options = session_state['answers'].get(question_number, [])
-                new_selected_options = display_question(question, selected_options, part_name_tab, session_state)
-                session_state['answers'][question_number] = new_selected_options
-            
-                # Flagging option
-                if st.checkbox("Flag this question", value=is_flagged, key=f"flag_{part_name_tab}_{question_number}"):
-                    session_state['flagged'].add(question_number)
-                else:
-                    session_state['flagged'].discard(question_number)
-            
-                # Navigation controls
-                display_navigation_controls(part_name_tab, session_state, total_questions)
-            
-                # Behavior based on mode
-                if st.session_state["mode"] == "Practice Mode":
-                    if st.button("Check Answer", key=f"check_{part_name_tab}_{session_state['current_question']}"):
-                        selected_options = session_state['answers'][question_number]
-                        correct_answer = question.get('correct_answer', [])
-                        num_correct = len(correct_answer)
-                        if len(selected_options) != num_correct:
-                            st.warning(f"Please select exactly {num_correct} answer(s) before checking.")
+            # Navigation controls
+            display_navigation_controls(part_name, session_state, total_questions)
+
+            # Behavior based on mode
+            if st.session_state["mode"] == "Practice Mode":
+                if st.button("Check Answer", key=f"check_{part_name}_{session_state['current_question']}"):
+                    selected_options = session_state['answers'][question_number]
+                    correct_answer = question.get('correct_answer', [])
+                    num_correct = len(correct_answer)
+                    if len(selected_options) != num_correct:
+                        st.warning(f"Please select exactly {num_correct} answer(s) before checking.")
+                    else:
+                        if set(selected_options) == set(correct_answer):
+                            st.success("Correct!")
                         else:
-                            if set(selected_options) == set(correct_answer):
-                                st.success("Correct!")
-                            else:
-                                st.error("Incorrect.")
-                                st.markdown("**Correct answer(s):**")
-                                for opt in correct_answer:
-                                    st.markdown(f"- **{opt}. {question['options'].get(opt, 'Option not found')}**")
-            else:
-                st.header("Exam Results")
-                display_exam_results(questions, session_state)
-
+                            st.error("Incorrect.")
+                            st.markdown("**Correct answer(s):**")
+                            for opt in correct_answer:
+                                st.markdown(f"- **{opt}. {question['options'].get(opt, 'Option not found')}**")
+        else:
+            st.header("Exam Results")
+            display_exam_results(questions, session_state)
 
 
 if __name__ == "__main__":

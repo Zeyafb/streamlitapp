@@ -205,7 +205,7 @@
                 "D": "Create an AWS Glue table and crawler for the data in Amazon S3. Use Amazon Athena Federated Query to access data within Amazon RDS for PostgreSQL. Generate reports by using Amazon Athena. Publish the reports to Amazon S3. Use S3 bucket policies to limit access to the reports."
             },
             "correct_answer": [
-                "A"
+                "B"
             ]
         },
         {

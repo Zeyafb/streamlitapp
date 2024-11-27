@@ -31,16 +31,17 @@ def initialize_part_session_state(part_name, question_number=None):
     if part_name not in st.session_state:
         st.session_state[part_name] = {
             'current_question': 0 if question_number is None else question_number - 1,
-            'answers': {},  # Holds answers for all questions
+            'answers': {},
             'show_results': False,
+            # Removed 'flagged' and 'highlighted_phrases'
         }
     else:
         if question_number is not None:
             st.session_state[part_name]['current_question'] = question_number - 1
+        # No need to initialize 'flagged' and 'highlighted_phrases'
 
 
-
-def display_question(question, part_name, highlighted_phrases):
+def display_question(question, selected_options, highlighted_phrases):
     """Displays the question and options, and returns updated selected options."""
     st.write("---")
     
@@ -49,35 +50,26 @@ def display_question(question, part_name, highlighted_phrases):
     question_text = highlight_text(question_text, highlighted_phrases)
     st.markdown(question_text, unsafe_allow_html=True)
     
-    # Access options and session state
+    # Display the options
     options = question['options']
     option_keys = list(options.keys())
-    question_number = question['question_number']
-    question_key = f"{part_name}_{question_number}"  # Unique question key
     correct_answer = question.get('correct_answer', [])
     num_correct = len(correct_answer)
-
-    # Initialize session state for this question
-    if question_key not in st.session_state['answers']:
-        st.session_state['answers'][question_key] = []
-
-    # Get selected options for this question
-    selected_options = st.session_state['answers'][question_key]
-
+    
     if num_correct > 1:
         st.info(f"This question requires selecting {num_correct} answers.")
         new_selected_options = []
         for key in option_keys:
-            checkbox_id = f"{question_key}_{key}"  # Unique key per checkbox
+            checkbox_id = f"{question['question_number']}_{key}"
             checked = key in selected_options
             option_text = options[key]
             option_text = highlight_text(f"{key}. {option_text}", highlighted_phrases)
             if st.checkbox(option_text, key=checkbox_id, value=checked):
                 new_selected_options.append(key)
-        st.session_state['answers'][question_key] = new_selected_options
+        return new_selected_options
     else:
         st.info("This question requires selecting 1 answer.")
-        radio_id = f"radio_{question_key}"  # Unique key per radio group
+        radio_id = f"{question['question_number']}"
         options_list = [f"{key}. {options[key]}" for key in option_keys]
         options_list = [highlight_text(opt, highlighted_phrases) for opt in options_list]
         if selected_options and selected_options[0] in option_keys:
@@ -90,10 +82,9 @@ def display_question(question, part_name, highlighted_phrases):
             index=index,
             key=radio_id
         )
-        # Extract selected letter and update session state
+        # Remove HTML tags to get the selected letter
         selected_letter = re.sub('<[^<]+?>', '', selected_option).split('.')[0]
-        st.session_state['answers'][question_key] = [selected_letter]
-
+        return [selected_letter]
 
 
 def display_navigation_controls(part_name, session_state, total_questions):
@@ -114,7 +105,6 @@ def display_navigation_controls(part_name, session_state, total_questions):
         if st.button("Submit Exam", key=f"submit_{part_name}"):
             session_state['show_results'] = True
             st.rerun()
-
 
 
 def display_question_map(session_state, total_questions):
@@ -232,7 +222,7 @@ def main():
         if new_phrase:
             if new_phrase not in highlighted_phrases:
                 highlighted_phrases.append(new_phrase)
-                st.rerun()
+                st.experimental_rerun()
             else:
                 st.sidebar.warning("Phrase is already highlighted.")
 
@@ -241,7 +231,7 @@ def main():
         for phrase in highlighted_phrases:
             if st.sidebar.button(f"Remove '{phrase}'", key=f"remove_{phrase}"):
                 highlighted_phrases.remove(phrase)
-                st.rerun()
+                st.experimental_rerun()
 
     # Search functionality
     st.sidebar.header("Search Questions")

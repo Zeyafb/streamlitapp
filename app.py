@@ -109,33 +109,35 @@ def display_question(question, selected_options, session_state):
                 new_selected_options.append(key)
         return new_selected_options
     # For single-answer questions
-    # For single-answer questions
     else:
         st.info("This question requires selecting 1 answer.")
         radio_id = f"{question_number}"
+    
         # Create options without highlighting for indexing
         plain_options_list = [f"{key}. {options[key]}" for key in option_keys]
         # Create options with highlighting for display
         highlighted_options_list = [highlight_text(opt, highlighted_phrases) for opt in plain_options_list]
+    
         selected_option_key = selected_options[0] if selected_options else None
         if selected_option_key in option_keys:
             index = option_keys.index(selected_option_key)
         else:
             index = -1  # No selection
+    
+        # Show radio options with highlights
         selected_option = st.radio(
             "Select your answer:",
             highlighted_options_list,
             index=index if index >= 0 else None,
             key=radio_id
         )
-        # Extract the selected letter from the displayed option
-        # Use the plain options list to find the selected option
-        selected_index = highlighted_options_list.index(selected_option)
+    
+        # Extract the selected letter by matching plain text
+        from bs4 import BeautifulSoup
+        selected_plain_text = BeautifulSoup(selected_option, "html.parser").get_text()
+        selected_index = [BeautifulSoup(opt, "html.parser").get_text() for opt in highlighted_options_list].index(selected_plain_text)
         selected_letter = option_keys[selected_index]
         return [selected_letter]
-
-
-
 
 def display_navigation_controls(part_name, session_state, total_questions):
     """Displays navigation controls for the exam."""

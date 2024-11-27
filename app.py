@@ -61,28 +61,33 @@ def display_question(question, selected_options, highlighted_phrases):
         new_selected_options = []
         for key in option_keys:
             checkbox_id = f"{question['question_number']}_{key}"
+            # Use session state to restore selections
             checked = key in selected_options
             option_text = options[key]
             option_text = highlight_text(f"{key}. {option_text}", highlighted_phrases)
+            # Update session state when a checkbox is checked/unchecked
             if st.checkbox(option_text, key=checkbox_id, value=checked):
                 new_selected_options.append(key)
         return new_selected_options
     else:
         st.info("This question requires selecting 1 answer.")
-        radio_id = f"{question['question_number']}"
+        radio_id = f"radio_{question['question_number']}"
+        # Build a list of options with unique keys
         options_list = [f"{key}. {options[key]}" for key in option_keys]
         options_list = [highlight_text(opt, highlighted_phrases) for opt in options_list]
+        # Find the index of the previously selected option
         if selected_options and selected_options[0] in option_keys:
             index = option_keys.index(selected_options[0])
         else:
             index = 0
+        # Display a radio button and restore the selected option
         selected_option = st.radio(
             "Select your answer:",
             options_list,
             index=index,
             key=radio_id
         )
-        # Remove HTML tags to get the selected letter
+        # Extract the selected letter (e.g., 'A', 'B') from the radio button value
         selected_letter = re.sub('<[^<]+?>', '', selected_option).split('.')[0]
         return [selected_letter]
 

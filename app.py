@@ -222,7 +222,7 @@ def main():
         if new_phrase:
             if new_phrase not in highlighted_phrases:
                 highlighted_phrases.append(new_phrase)
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.sidebar.warning("Phrase is already highlighted.")
 
@@ -231,7 +231,7 @@ def main():
         for phrase in highlighted_phrases:
             if st.sidebar.button(f"Remove '{phrase}'", key=f"remove_{phrase}"):
                 highlighted_phrases.remove(phrase)
-                st.experimental_rerun()
+                st.rerun()
 
     # Search functionality
     st.sidebar.header("Search Questions")

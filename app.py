@@ -15,6 +15,16 @@ def highlight_text(text, search_query):
     )
     return highlighted_text
 
+def highlight_text(text, search_query):
+    """Highlights the search query within the given text."""
+    escaped_query = re.escape(search_query)
+    highlighted_text = re.sub(
+        f"({escaped_query})",
+        r"<span style='background-color: #f3f3f3; color: #333; padding: 2px; border-radius: 4px;'>\1</span>",
+        text,
+        flags=re.IGNORECASE
+    )
+    return highlighted_text
 
 def navigate_to_question(part_name, question_number):
     """Sets query parameters to navigate to a specific question."""

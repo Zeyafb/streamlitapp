@@ -85,7 +85,7 @@ def display_question(question, selected_options, session_state):
             phrase = selected_text.strip()
             if phrase not in highlighted_phrases:
                 highlighted_phrases.append(phrase)
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.warning("Phrase is already highlighted.")
         else:

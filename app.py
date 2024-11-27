@@ -33,10 +33,12 @@ def initialize_part_session_state(part_name, question_number=None):
             'current_question': 0 if question_number is None else question_number - 1,
             'answers': {},
             'show_results': False,
+            # Removed 'flagged' and 'highlighted_phrases'
         }
     else:
         if question_number is not None:
             st.session_state[part_name]['current_question'] = question_number - 1
+        # No need to initialize 'flagged' and 'highlighted_phrases'
 
 
 def display_question(question, selected_options, highlighted_phrases):
@@ -48,7 +50,7 @@ def display_question(question, selected_options, highlighted_phrases):
     question_text = highlight_text(question_text, highlighted_phrases)
     st.markdown(question_text, unsafe_allow_html=True)
     
-    # Display the options with highlighting
+    # Display the options
     options = question['options']
     option_keys = list(options.keys())
     correct_answer = question.get('correct_answer', [])
@@ -58,30 +60,30 @@ def display_question(question, selected_options, highlighted_phrases):
         st.info(f"This question requires selecting {num_correct} answers.")
         new_selected_options = []
         for key in option_keys:
-            option_text = options[key]
-            option_text_highlighted = highlight_text(f"{key}. {option_text}", highlighted_phrases)
-            st.markdown(f"- {option_text_highlighted}", unsafe_allow_html=True)
             checkbox_id = f"{question['question_number']}_{key}"
             checked = key in selected_options
-            if st.checkbox(f"Select {key}", key=checkbox_id, value=checked):
+            option_text = options[key]
+            option_text = highlight_text(f"{key}. {option_text}", highlighted_phrases)
+            if st.checkbox(option_text, key=checkbox_id, value=checked):
                 new_selected_options.append(key)
         return new_selected_options
     else:
         st.info("This question requires selecting 1 answer.")
-        # Display options with highlighting
-        for key in option_keys:
-            option_text = options[key]
-            option_text_highlighted = highlight_text(f"{key}. {option_text}", highlighted_phrases)
-            st.markdown(f"- {option_text_highlighted}", unsafe_allow_html=True)
-        
         radio_id = f"{question['question_number']}"
-        selected_letter = selected_options[0] if selected_options else None
-        selected_letter = st.radio(
+        options_list = [f"{key}. {options[key]}" for key in option_keys]
+        options_list = [highlight_text(opt, highlighted_phrases) for opt in options_list]
+        if selected_options and selected_options[0] in option_keys:
+            index = option_keys.index(selected_options[0])
+        else:
+            index = 0
+        selected_option = st.radio(
             "Select your answer:",
-            option_keys,
-            index=option_keys.index(selected_letter) if selected_letter in option_keys else 0,
+            options_list,
+            index=index,
             key=radio_id
         )
+        # Remove HTML tags to get the selected letter
+        selected_letter = re.sub('<[^<]+?>', '', selected_option).split('.')[0]
         return [selected_letter]
 
 

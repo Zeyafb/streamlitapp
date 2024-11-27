@@ -23,7 +23,7 @@ def highlight_text(text, phrases):
 def navigate_to_question(part_name, question_number):
     """Sets query parameters to navigate to a specific question."""
     st.experimental_set_query_params(part=part_name, question=question_number)
-    st.rerun
+    st.rerun()
 
 
 def initialize_part_session_state(part_name, question_number=None):
@@ -34,9 +34,9 @@ def initialize_part_session_state(part_name, question_number=None):
             'answers': {},  # Holds answers for all questions
             'show_results': False,
         }
-    else:
-        if question_number is not None:
-            st.session_state[part_name]['current_question'] = question_number - 1
+    elif question_number is not None:
+        st.session_state[part_name]['current_question'] = question_number - 1
+
 
 
 
@@ -99,20 +99,24 @@ def display_navigation_controls(part_name, session_state, total_questions):
     """Displays navigation controls for the exam."""
     st.write("---")
     col1, col2, col3 = st.columns(3)
+
     with col1:
         if st.button("Previous", key=f"prev_{part_name}_{session_state['current_question']}"):
             if session_state['current_question'] > 0:
                 session_state['current_question'] -= 1
-                st.rerun
+                st.rerun()
+
     with col2:
         if st.button("Next", key=f"next_{part_name}_{session_state['current_question']}"):
             if session_state['current_question'] < total_questions - 1:
                 session_state['current_question'] += 1
-                st.rerun
+                st.rerun()
+
     with col3:
         if st.button("Submit Exam", key=f"submit_{part_name}"):
             session_state['show_results'] = True
-            st.rerun
+            st.rerun()
+
 
 
 def display_question_map(session_state, total_questions):

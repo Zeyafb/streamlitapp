@@ -23,7 +23,7 @@ def highlight_text(text, phrases):
 def navigate_to_question(part_name, question_number):
     """Sets query parameters to navigate to a specific question."""
     st.experimental_set_query_params(part=part_name, question=question_number)
-    st.rerun()
+    st.rerun
 
 
 def initialize_part_session_state(part_name, question_number=None):
@@ -230,7 +230,7 @@ def main():
         if new_phrase:
             if new_phrase not in highlighted_phrases:
                 highlighted_phrases.append(new_phrase)
-                st.rerun()
+                st.rerun
             else:
                 st.sidebar.warning("Phrase is already highlighted.")
 
@@ -239,7 +239,7 @@ def main():
         for phrase in highlighted_phrases:
             if st.sidebar.button(f"Remove '{phrase}'", key=f"remove_{phrase}"):
                 highlighted_phrases.remove(phrase)
-                st.rerun()
+                st.rerun
 
     # Search functionality
     st.sidebar.header("Search Questions")
@@ -250,7 +250,7 @@ def main():
         if st.sidebar.button("Return to Exam"):
             st.session_state["search_query"] = ""
             st.experimental_set_query_params()
-            st.rerun()
+            st.rerun
 
     search_results = []
     total_instances = 0

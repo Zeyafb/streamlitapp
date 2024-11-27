@@ -31,17 +31,16 @@ def initialize_part_session_state(part_name, question_number=None):
     if part_name not in st.session_state:
         st.session_state[part_name] = {
             'current_question': 0 if question_number is None else question_number - 1,
-            'answers': {},
+            'answers': {},  # Holds answers for all questions
             'show_results': False,
-            # Removed 'flagged' and 'highlighted_phrases'
         }
     else:
         if question_number is not None:
             st.session_state[part_name]['current_question'] = question_number - 1
-        # No need to initialize 'flagged' and 'highlighted_phrases'
 
 
-def display_question(question, selected_options, highlighted_phrases):
+
+def display_question(question, part_name, highlighted_phrases):
     """Displays the question and options, and returns updated selected options."""
     st.write("---")
     
@@ -50,46 +49,50 @@ def display_question(question, selected_options, highlighted_phrases):
     question_text = highlight_text(question_text, highlighted_phrases)
     st.markdown(question_text, unsafe_allow_html=True)
     
-    # Display the options
+    # Access options and session state
     options = question['options']
     option_keys = list(options.keys())
+    question_number = question['question_number']
+    question_key = f"{part_name}_{question_number}"  # Unique question key
     correct_answer = question.get('correct_answer', [])
     num_correct = len(correct_answer)
-    
+
+    # Initialize session state for this question
+    if question_key not in st.session_state['answers']:
+        st.session_state['answers'][question_key] = []
+
+    # Get selected options for this question
+    selected_options = st.session_state['answers'][question_key]
+
     if num_correct > 1:
         st.info(f"This question requires selecting {num_correct} answers.")
         new_selected_options = []
         for key in option_keys:
-            checkbox_id = f"{question['question_number']}_{key}"
-            # Use session state to restore selections
+            checkbox_id = f"{question_key}_{key}"  # Unique key per checkbox
             checked = key in selected_options
             option_text = options[key]
             option_text = highlight_text(f"{key}. {option_text}", highlighted_phrases)
-            # Update session state when a checkbox is checked/unchecked
             if st.checkbox(option_text, key=checkbox_id, value=checked):
                 new_selected_options.append(key)
-        return new_selected_options
+        st.session_state['answers'][question_key] = new_selected_options
     else:
         st.info("This question requires selecting 1 answer.")
-        radio_id = f"radio_{question['question_number']}"
-        # Build a list of options with unique keys
+        radio_id = f"radio_{question_key}"  # Unique key per radio group
         options_list = [f"{key}. {options[key]}" for key in option_keys]
         options_list = [highlight_text(opt, highlighted_phrases) for opt in options_list]
-        # Find the index of the previously selected option
         if selected_options and selected_options[0] in option_keys:
             index = option_keys.index(selected_options[0])
         else:
             index = 0
-        # Display a radio button and restore the selected option
         selected_option = st.radio(
             "Select your answer:",
             options_list,
             index=index,
             key=radio_id
         )
-        # Extract the selected letter (e.g., 'A', 'B') from the radio button value
+        # Extract selected letter and update session state
         selected_letter = re.sub('<[^<]+?>', '', selected_option).split('.')[0]
-        return [selected_letter]
+        st.session_state['answers'][question_key] = [selected_letter]
 
 
 def display_navigation_controls(part_name, session_state, total_questions):
@@ -212,7 +215,7 @@ def main():
     part_name = selected_part
 
     # Initialize session state for navigation
-    initialize_part_session_state(part_name, question_number)
+    rerun(part_name, question_number)
 
     session_state = st.session_state[part_name]
 

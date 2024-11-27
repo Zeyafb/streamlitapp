@@ -4,16 +4,21 @@ import json
 import streamlit as st
 
 
-def highlight_text(text, search_query):
-    """Highlights the search query within the given text."""
-    escaped_query = re.escape(search_query)
+def highlight_text(text, phrases):
+    """Highlights a list of phrases within the given text."""
+    if not phrases:
+        return text
+    # Escape and join phrases into a single regex pattern
+    escaped_phrases = [re.escape(phrase) for phrase in phrases]
+    pattern = '|'.join(escaped_phrases)
     highlighted_text = re.sub(
-        f"({escaped_query})",
-        r"<span style='background-color: #f3f3f3; color: #333; padding: 2px; border-radius: 4px;'>\1</span>",
+        f"({pattern})",
+        r"<span style='background-color: yellow; color: black;'>\1</span>",
         text,
         flags=re.IGNORECASE
     )
     return highlighted_text
+
 
 
 def navigate_to_question(part_name, question_number):
@@ -29,26 +34,64 @@ def initialize_part_session_state(part_name, question_number=None):
             'current_question': 0 if question_number is None else question_number - 1,
             'answers': {},
             'show_results': False,
-            'flagged': set()
+            'flagged': set(),
+            'highlighted_phrases': {}
         }
     else:
         if question_number is not None:
             st.session_state[part_name]['current_question'] = question_number - 1
         if 'flagged' not in st.session_state[part_name]:
             st.session_state[part_name]['flagged'] = set()
+        if 'highlighted_phrases' not in st.session_state[part_name]:
+            st.session_state[part_name]['highlighted_phrases'] = {}
+
 
 
 def display_question(question, selected_options, part_name, session_state):
     """Displays the question and options, and returns updated selected options."""
     st.write("---")
-    st.write(question['question_text'])
-
+    
+    question_number = question['question_number']
+    
+    # Initialize highlighted phrases for this question if not already done
+    if 'highlighted_phrases' not in session_state:
+        session_state['highlighted_phrases'] = {}
+    if question_number not in session_state['highlighted_phrases']:
+        session_state['highlighted_phrases'][question_number] = []
+    
+    highlighted_phrases = session_state['highlighted_phrases'][question_number]
+    
+    # Input for adding new phrases to highlight
+    new_phrase = st.text_input("Enter a phrase to highlight:", key=f"highlight_input_{part_name}_{question_number}")
+    if st.button("Add Highlight", key=f"add_highlight_{part_name}_{question_number}"):
+        if new_phrase:
+            if new_phrase not in highlighted_phrases:
+                highlighted_phrases.append(new_phrase)
+                st.experimental_rerun()
+            else:
+                st.warning("Phrase is already highlighted.")
+    
+    # Display current highlighted phrases
+    if highlighted_phrases:
+        st.write("Highlighted phrases:")
+        cols = st.columns(len(highlighted_phrases))
+        for idx, phrase in enumerate(highlighted_phrases):
+            with cols[idx]:
+                if st.button(f"❌ {phrase}", key=f"remove_highlight_{part_name}_{question_number}_{phrase}"):
+                    highlighted_phrases.remove(phrase)
+                    st.experimental_rerun()
+    
+    # Highlight the phrases in the question text
+    question_text = question['question_text']
+    question_text = highlight_text(question_text, highlighted_phrases)
+    st.markdown(question_text, unsafe_allow_html=True)
+    
+    # Display the options as before
     options = question['options']
     option_keys = list(options.keys())
-
     correct_answer = question.get('correct_answer', [])
     num_correct = len(correct_answer)
-
+    
     if num_correct > 1:
         st.info(f"This question requires selecting {num_correct} answers.")
         new_selected_options = []
@@ -74,6 +117,7 @@ def display_question(question, selected_options, part_name, session_state):
         )
         selected_letter = selected_option.split('.')[0]
         return [selected_letter]
+
 
 
 def display_navigation_controls(part_name, session_state, total_questions):
@@ -151,7 +195,9 @@ def display_exam_results(questions, session_state):
         session_state['answers'] = {}
         session_state['show_results'] = False
         session_state['flagged'] = set()
+        session_state['highlighted_phrases'] = {}
         st.rerun()
+
 
 
 def main():

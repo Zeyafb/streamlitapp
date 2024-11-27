@@ -117,6 +117,7 @@ def display_navigation_controls(part_name, session_state, total_questions):
             st.rerun()
 
 
+
 def display_question_map(session_state, total_questions):
     """Displays a collapsible question map."""
     with st.expander("Question Map"):

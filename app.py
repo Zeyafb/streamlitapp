@@ -41,102 +41,49 @@ def initialize_part_session_state(part_name, question_number=None):
         # No need to initialize 'flagged' and 'highlighted_phrases'
 
 
-def display_question(question, selected_options, session_state):
+def display_question(question, selected_options, highlighted_phrases):
     """Displays the question and options, and returns updated selected options."""
     st.write("---")
     
-    question_number = question['question_number']
+    # Highlight the phrases in the question text
+    question_text = question['question_text']
+    question_text = highlight_text(question_text, highlighted_phrases)
+    st.markdown(question_text, unsafe_allow_html=True)
     
-    # Initialize highlighted phrases for this question if not already done
-    if 'highlighted_phrases' not in session_state:
-        session_state['highlighted_phrases'] = {}
-    if question_number not in session_state['highlighted_phrases']:
-        session_state['highlighted_phrases'][question_number] = []
-    highlighted_phrases = session_state['highlighted_phrases'][question_number]
-    
-    # Display the question text with highlighting
-    question_text = highlight_text(question['question_text'], highlighted_phrases)
-    st.markdown(f"<div id='question-text'>{question_text}</div>", unsafe_allow_html=True)
-    
-    # JavaScript to capture selected text
-    st.markdown("""
-    <script>
-    const questionTextDiv = document.getElementById('question-text');
-    let selectedText = '';
-
-    document.addEventListener('selectionchange', function() {
-        const selection = window.getSelection();
-        selectedText = selection.toString();
-        const streamlitDoc = window.parent.document;
-        const selectedTextInput = streamlitDoc.getElementById('selected-text-input');
-        if (selectedTextInput) {
-            selectedTextInput.value = selectedText;
-        }
-    });
-    </script>
-    """, unsafe_allow_html=True)
-    
-    # Hidden text input to store selected text
-    selected_text = st.text_input("", key='selected_text_input', label_visibility='collapsed')
-
-    # Button to highlight selected text
-    if st.button("Highlight Selected Text"):
-        if selected_text.strip():
-            phrase = selected_text.strip()
-            if phrase not in highlighted_phrases:
-                highlighted_phrases.append(phrase)
-                st.rerun()
-            else:
-                st.warning("Phrase is already highlighted.")
-        else:
-            st.warning("No text selected.")
-    
-    # Display options with highlighting
+    # Display the options
     options = question['options']
     option_keys = list(options.keys())
     correct_answer = question.get('correct_answer', [])
     num_correct = len(correct_answer)
     
-    # For multiple-answer questions
     if num_correct > 1:
         st.info(f"This question requires selecting {num_correct} answers.")
         new_selected_options = []
         for key in option_keys:
-            checkbox_id = f"{question_number}_{key}"
+            checkbox_id = f"{question['question_number']}_{key}"
             checked = key in selected_options
-            option_text = highlight_text(f"{key}. {options[key]}", highlighted_phrases)
+            option_text = options[key]
+            option_text = highlight_text(f"{key}. {option_text}", highlighted_phrases)
             if st.checkbox(option_text, key=checkbox_id, value=checked):
                 new_selected_options.append(key)
         return new_selected_options
-    # For single-answer questions
     else:
         st.info("This question requires selecting 1 answer.")
-        radio_id = f"{question_number}"
-    
-        # Create option keys and plain options list
-        plain_options_list = [f"{key}. {options[key]}" for key in option_keys]
-        highlighted_options_list = [highlight_text(opt, highlighted_phrases) for opt in plain_options_list]
-    
-        # Find the index of the previously selected option
-        selected_option_key = selected_options[0] if selected_options else None
-        if selected_option_key in option_keys:
-            index = option_keys.index(selected_option_key)
+        radio_id = f"{question['question_number']}"
+        options_list = [f"{key}. {options[key]}" for key in option_keys]
+        options_list = [highlight_text(opt, highlighted_phrases) for opt in options_list]
+        if selected_options and selected_options[0] in option_keys:
+            index = option_keys.index(selected_options[0])
         else:
-            index = -1  # Default to no selection
-    
-        # Render the radio buttons
+            index = 0
         selected_option = st.radio(
             "Select your answer:",
-            highlighted_options_list,
-            index=index if index >= 0 else None,
+            options_list,
+            index=index,
             key=radio_id
         )
-    
-        # Extract the selected letter
-        from bs4 import BeautifulSoup
-        selected_plain_text = BeautifulSoup(selected_option, "html.parser").get_text()
-        selected_index = plain_options_list.index(selected_plain_text)
-        selected_letter = option_keys[selected_index]
+        # Remove HTML tags to get the selected letter
+        selected_letter = re.sub('<[^<]+?>', '', selected_option).split('.')[0]
         return [selected_letter]
 
 

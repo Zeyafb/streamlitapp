@@ -31,14 +31,13 @@ def initialize_part_session_state(part_name, question_number=None):
     if part_name not in st.session_state:
         st.session_state[part_name] = {
             'current_question': 0 if question_number is None else question_number - 1,
-            'answers': {},
+            'answers': {},  # Holds answers for all questions
             'show_results': False,
-            # Removed 'flagged' and 'highlighted_phrases'
         }
     else:
         if question_number is not None:
             st.session_state[part_name]['current_question'] = question_number - 1
-        # No need to initialize 'flagged' and 'highlighted_phrases'
+
 
 
 def display_question(question, part_name, highlighted_phrases):

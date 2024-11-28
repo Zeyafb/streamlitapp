@@ -9542,7 +9542,7 @@
                 "D": "Create AWS Site-to-Site VPN connections from on premises to each VPC. Ensure that both VPN tunnels are UP for each connection. Turn on the route propagation feature."
             },
             "correct_answer": [
-                "D"
+                "A"
             ]
         },
         {

@@ -23,8 +23,8 @@ def highlight_text(text, phrases):
 def navigate_to_question(part_name, question_number):
     """Sets query parameters to navigate to a specific question."""
     st.experimental_set_query_params(part=part_name, question=question_number)
-    # Avoid rerunning immediately after setting query parameters
-    st.session_state['navigate_to'] = {'part': part_name, 'question': question_number}
+    st.stop()  # Stop further execution to avoid conflicts
+
 
 
 
@@ -166,12 +166,22 @@ def display_exam_results(questions, session_state):
 
 def main():
     # Handle navigation first
-    if 'navigate_to' in st.session_state:
-        navigate_to = st.session_state.pop('navigate_to', None)
-        if navigate_to:
-            st.experimental_set_query_params(part=navigate_to['part'], question=navigate_to['question'])
-            st.stop()  # Gracefully stop execution to avoid further conflicts
+    query_params = st.query_params
+    if "part" in query_params and "question" in query_params:
+        part_name = query_params.get("part")[0]
+        question_number = query_params.get("question")[0]
+        if part_name and question_number:
+            try:
+                question_number = int(question_number)
+                st.session_state["part"] = part_name
+                st.session_state["current_question"] = question_number - 1
+            except ValueError:
+                st.warning("Invalid question number in query parameters.")
+            st.stop()  # Stop execution to reload with updated session state
+
+    # Existing app logic
     st.title("Practice Exam Simulator")
+
 
     # Handle query parameters
     query_params = st.query_params

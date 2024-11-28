@@ -7,7 +7,7 @@ import streamlit as st
 def navigate_to_question(part_name, question_number):
     """Sets query parameters to navigate to a specific question."""
     if part_name and question_number:
-         st.experimental_set_query_params(part=part_name, question=str(question_number))
+        st.experimental_set_query_params(part=part_name, question=str(question_number))
         st.stop()  # Stop further execution to allow Streamlit to rerun with updated parameters
 
 
@@ -95,10 +95,10 @@ def display_question_map(session_state, total_questions):
 
 def main():
     # Handle navigation from query parameters
-    query_params = st.query_params
+    query_params = st.experimental_get_query_params()
     if "part" in query_params and "question" in query_params:
-        part_name = query_params.get("part")
-        question_number = query_params.get("question")
+        part_name = query_params.get("part", [None])[0]
+        question_number = query_params.get("question", [None])[0]
         try:
             question_number = int(question_number)
             st.session_state["part_name"] = part_name
@@ -110,9 +110,9 @@ def main():
     st.title("Practice Exam Simulator")
 
     # Handle query parameters
-    query_params = st.query_params
-    part_name = query_params.get("part", None)
-    question_number = query_params.get("question", None)
+    query_params = st.experimental_get_query_params()
+    part_name = query_params.get("part", [None])[0]
+    question_number = query_params.get("question", [None])[0]
     if question_number is not None:
         try:
             question_number = int(question_number)
@@ -158,7 +158,7 @@ def main():
     if search_query:
         if st.sidebar.button("Return to Exam"):
             st.session_state["search_query"] = ""
-             st.experimental_set_query_params()
+            st.experimental_set_query_params()
             st.rerun()
 
     search_results = []

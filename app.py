@@ -4,11 +4,31 @@ import json
 import streamlit as st
 
 
+# Set default layout to wide mode
+st.set_page_config(layout="wide")
+
+
+def highlight_text(text, phrases):
+    """Highlights a list of phrases within the given text."""
+    if not phrases:
+        return text
+    # Escape and join phrases into a single regex pattern
+    escaped_phrases = [re.escape(phrase) for phrase in phrases]
+    pattern = '|'.join(escaped_phrases)
+    highlighted_text = re.sub(
+        f"({pattern})",
+        r"<mark>\1</mark>",
+        text,
+        flags=re.IGNORECASE
+    )
+    return highlighted_text
+
+
 def navigate_to_question(part_name, question_number):
     """Sets query parameters to navigate to a specific question."""
     if part_name and question_number:
         st.experimental_set_query_params(part=part_name, question=str(question_number))
-        st.stop()  # Stop further execution to allow Streamlit to rerun with updated parameters
+        st.rerun()  # Rerun the app with updated parameters
 
 
 def initialize_part_session_state(part_name, question_number=None):
@@ -103,7 +123,7 @@ def main():
             question_number = int(question_number)
             st.session_state["part_name"] = part_name
             st.session_state["current_question"] = question_number - 1
-        except ValueError:
+        except (ValueError, TypeError):
             st.error("Invalid query parameter value for 'question'")
         st.stop()  # Stop execution to reload with updated session state
 
@@ -116,7 +136,7 @@ def main():
     if question_number is not None:
         try:
             question_number = int(question_number)
-        except ValueError:
+        except (ValueError, TypeError):
             question_number = None
 
     # Load questions
@@ -167,20 +187,30 @@ def main():
     if search_query:
         for part_name_search, questions in questions_by_part.items():
             for question in questions:
+                occurrences_in_question = 0
+
+                # Search in question text
                 question_text_occurrences = len(re.findall(re.escape(search_query), question['question_text'], re.IGNORECASE))
-                option_occurrences = sum(
-                    len(re.findall(re.escape(search_query), option_text, re.IGNORECASE))
-                    for option_text in question['options'].values()
-                )
-                occurrences_in_question = question_text_occurrences + option_occurrences
+                occurrences_in_question += question_text_occurrences
+                highlighted_question_text = highlight_text(question['question_text'], [search_query]) if question_text_occurrences else question['question_text']
+
+                # Search in options
+                option_occurrences = {}
+                for opt_key, opt_text in question['options'].items():
+                    count = len(re.findall(re.escape(search_query), opt_text, re.IGNORECASE))
+                    if count > 0:
+                        occurrences_in_question += count
+                        option_occurrences[opt_key] = highlight_text(opt_text, [search_query])
+                    else:
+                        option_occurrences[opt_key] = opt_text
 
                 if occurrences_in_question > 0:
                     total_instances += occurrences_in_question
                     search_results.append({
                         'part_name': part_name_search,
                         'question_number': question['question_number'],
-                        'question_text': question['question_text'],
-                        'options': question['options']
+                        'question_text': highlighted_question_text,
+                        'options': option_occurrences
                     })
 
         st.sidebar.write(f"Found {len(search_results)} questions relating to '{search_query}'")
@@ -190,12 +220,12 @@ def main():
         st.subheader("Search Results")
         for result in search_results:
             st.markdown(f"**Part:** {result['part_name']}, **Question {result['question_number']}**")
-            st.write(result['question_text'])
+            st.markdown(result['question_text'], unsafe_allow_html=True)
 
             for option, option_text in result['options'].items():
-                st.markdown(f"- **{option}**: {option_text}")
+                st.markdown(f"- **{option}**: {option_text}", unsafe_allow_html=True)
 
-            if st.button(f"Go to Question {result['question_number']} in {result['part_name']}"):
+            if st.button(f"Go to Question {result['question_number']} in {result['part_name']}", key=f"go_{result['part_name']}_{result['question_number']}"):
                 navigate_to_question(result['part_name'], result['question_number'])
 
             st.markdown("---")

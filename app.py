@@ -150,76 +150,62 @@ def main():
     session_state = st.session_state[part_name]
 
     # Search functionality
-st.sidebar.header("Search Questions")
+    st.sidebar.header("Search Questions")
+    search_query = st.sidebar.text_input("Enter a keyword or phrase to search:", key='search_query')
 
-# Initialize search_query in session state if not already present
-if 'search_query' not in st.session_state:
-    st.session_state['search_query'] = ""
+    if search_query:
+        if st.sidebar.button("Return to Exam"):
+            st.session_state['search_query'] = ""
+            st.rerun()
 
-# Use a temporary variable for the search input
-search_input = st.sidebar.text_input("Enter a keyword or phrase to search:", value=st.session_state['search_query'], key='search_query_widget')
-
-if st.sidebar.button("Search"):
-    # Update session state with the search input
-    st.session_state['search_query'] = search_input
-    st.rerun()
-
-if st.sidebar.button("Return to Exam"):
-    # Clear the search query
-    st.session_state['search_query'] = ""
-    st.rerun()
-
-# Use st.session_state['search_query'] for the search logic
-search_query = st.session_state['search_query']
-
-if search_query:
     search_results = []
     total_instances = 0
 
-    for part_name_search, questions in questions_by_part.items():
-        for question in questions:
-            occurrences_in_question = 0
+    if search_query:
+        for part_name_search, questions in questions_by_part.items():
+            for question in questions:
+                occurrences_in_question = 0
 
-            # Search in question text
-            question_text_occurrences = len(re.findall(re.escape(search_query), question['question_text'], re.IGNORECASE))
-            occurrences_in_question += question_text_occurrences
-            highlighted_question_text = highlight_text(question['question_text'], [search_query]) if question_text_occurrences else question['question_text']
+                # Search in question text
+                question_text_occurrences = len(re.findall(re.escape(search_query), question['question_text'], re.IGNORECASE))
+                occurrences_in_question += question_text_occurrences
+                highlighted_question_text = highlight_text(question['question_text'], [search_query]) if question_text_occurrences else question['question_text']
 
-            # Search in options
-            option_occurrences = {}
-            for opt_key, opt_text in question['options'].items():
-                count = len(re.findall(re.escape(search_query), opt_text, re.IGNORECASE))
-                if count > 0:
-                    occurrences_in_question += count
-                    option_occurrences[opt_key] = highlight_text(opt_text, [search_query])
-                else:
-                    option_occurrences[opt_key] = opt_text
+                # Search in options
+                option_occurrences = {}
+                for opt_key, opt_text in question['options'].items():
+                    count = len(re.findall(re.escape(search_query), opt_text, re.IGNORECASE))
+                    if count > 0:
+                        occurrences_in_question += count
+                        option_occurrences[opt_key] = highlight_text(opt_text, [search_query])
+                    else:
+                        option_occurrences[opt_key] = opt_text
 
-            if occurrences_in_question > 0:
-                total_instances += occurrences_in_question
-                search_results.append({
-                    'part_name': part_name_search,
-                    'question_number': question['question_number'],
-                    'question_text': highlighted_question_text,
-                    'options': option_occurrences
-                })
+                if occurrences_in_question > 0:
+                    total_instances += occurrences_in_question
+                    search_results.append({
+                        'part_name': part_name_search,
+                        'question_number': question['question_number'],
+                        'question_text': highlighted_question_text,
+                        'options': option_occurrences
+                    })
 
-    st.sidebar.write(f"Found {len(search_results)} questions relating to '{search_query}'")
-    st.sidebar.write(f"There are {total_instances} instances of '{search_query}'")
+        st.sidebar.write(f"Found {len(search_results)} questions relating to '{search_query}'")
+        st.sidebar.write(f"There are {total_instances} instances of '{search_query}'")
 
-    st.subheader("Search Results")
-    for result in search_results:
-        st.markdown(f"**Part:** {result['part_name']}, **Question {result['question_number']}**")
-        st.markdown(result['question_text'], unsafe_allow_html=True)
+    if search_results:
+        st.subheader("Search Results")
+        for result in search_results:
+            st.markdown(f"**Part:** {result['part_name']}, **Question {result['question_number']}**")
+            st.markdown(result['question_text'], unsafe_allow_html=True)
 
-        for option, option_text in result['options'].items():
-            st.markdown(f"- **{option}**: {option_text}", unsafe_allow_html=True)
+            for option, option_text in result['options'].items():
+                st.markdown(f"- **{option}**: {option_text}", unsafe_allow_html=True)
 
-        if st.button(f"Go to Question {result['question_number']} in {result['part_name']}", key=f"go_{result['part_name']}_{result['question_number']}"):
-            navigate_to_question(result['part_name'], result['question_number'])
+            if st.button(f"Go to Question {result['question_number']} in {result['part_name']}", key=f"go_{result['part_name']}_{result['question_number']}"):
+                navigate_to_question(result['part_name'], result['question_number'])
 
-        st.markdown("---")
-
+            st.markdown("---")
     else:
         # Display the exam interface
         st.header(part_name)

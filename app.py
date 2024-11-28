@@ -300,7 +300,7 @@ def main():
                 st.markdown(f"- **{option}**: {option_text}", unsafe_allow_html=True)
 
             if st.button(f"Go to Question {result['question_number']} in {result['part_name']}"):
-    navigate_to_question(result['part_name'], result['question_number'])
+                navigate_to_question(result['part_name'], result['question_number'])
 
             st.markdown("---")
     else:

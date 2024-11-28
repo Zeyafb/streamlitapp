@@ -23,16 +23,6 @@ def highlight_text(text, phrases):
     return highlighted_text
 
 
-def navigate_to_question(part_name, question_number):
-    """Navigates to a specific question without using URL query parameters."""
-    if part_name and question_number:
-        st.session_state['selected_part'] = part_name
-        if part_name not in st.session_state:
-            initialize_part_session_state(part_name)
-        st.session_state[part_name]['current_question'] = int(question_number) - 1
-        st.rerun()
-
-
 def initialize_part_session_state(part_name):
     """Initializes the session state for a given part."""
     if part_name not in st.session_state:
@@ -187,7 +177,8 @@ def main():
                         'part_name': part_name_search,
                         'question_number': question['question_number'],
                         'question_text': highlighted_question_text,
-                        'options': option_occurrences
+                        'options': option_occurrences,
+                        'correct_answer': question.get('correct_answer', [])
                     })
 
         st.sidebar.write(f"Found {len(search_results)} questions relating to '{search_query}'")
@@ -202,8 +193,11 @@ def main():
             for option, option_text in result['options'].items():
                 st.markdown(f"- **{option}**: {option_text}", unsafe_allow_html=True)
 
-            if st.button(f"Go to Question {result['question_number']} in {result['part_name']}", key=f"go_{result['part_name']}_{result['question_number']}"):
-                navigate_to_question(result['part_name'], result['question_number'])
+            # Show the correct answer
+            correct_options = result['correct_answer']
+            st.markdown("**Correct Answer(s):**")
+            for opt in correct_options:
+                st.markdown(f"- **{opt}. {result['options'][opt]}**")
 
             st.markdown("---")
     else:

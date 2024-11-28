@@ -22,8 +22,9 @@ def highlight_text(text, phrases):
 
 def navigate_to_question(part_name, question_number):
     """Sets query parameters to navigate to a specific question."""
-    st.experimental_set_query_params(part=part_name, question=question_number)
-    st.stop()  # Stop further execution to avoid conflicts
+    if part_name and question_number:
+        st.experimental_set_query_params(part=part_name, question=question_number)
+        st.stop()  # Stop further execution to allow Streamlit to rerun with updated parameters
 
 
 
@@ -165,21 +166,20 @@ def display_exam_results(questions, session_state):
 
 
 def main():
-    # Handle navigation first
+    # Handle navigation from query parameters
     query_params = st.query_params
     if "part" in query_params and "question" in query_params:
         part_name = query_params.get("part")[0]
         question_number = query_params.get("question")[0]
-        if part_name and question_number:
-            try:
-                question_number = int(question_number)
-                st.session_state["part"] = part_name
-                st.session_state["current_question"] = question_number - 1
-            except ValueError:
-                st.warning("Invalid question number in query parameters.")
-            st.stop()  # Stop execution to reload with updated session state
+        try:
+            question_number = int(question_number)
+            st.session_state["part_name"] = part_name
+            st.session_state["current_question"] = question_number - 1
+        except ValueError:
+            st.error("Invalid query parameter value for 'question'")
+        st.stop()  # Stop execution to reload with updated session state
 
-    # Existing app logic
+    # Rest of your app logic follows
     st.title("Practice Exam Simulator")
 
 
@@ -299,9 +299,8 @@ def main():
             for option, option_text in result['options'].items():
                 st.markdown(f"- **{option}**: {option_text}", unsafe_allow_html=True)
 
-            if st.button(f"Go to Question {result['question_number']} in {result['part_name']}",
-                         key=f"nav_{result['part_name']}_{result['question_number']}"):
-                navigate_to_question(result['part_name'], result['question_number'])
+            if st.button(f"Go to Question {result['question_number']} in {result['part_name']}"):
+    navigate_to_question(result['part_name'], result['question_number'])
 
             st.markdown("---")
     else:

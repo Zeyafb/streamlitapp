@@ -7,7 +7,7 @@ import streamlit as st
 def navigate_to_question(part_name, question_number):
     """Sets query parameters to navigate to a specific question."""
     if part_name and question_number:
-        st.update_query_params(part=part_name, question=str(question_number))
+         st.experimental_set_query_params(part=part_name, question=str(question_number))
         st.stop()  # Stop further execution to allow Streamlit to rerun with updated parameters
 
 
@@ -158,7 +158,7 @@ def main():
     if search_query:
         if st.sidebar.button("Return to Exam"):
             st.session_state["search_query"] = ""
-            st.update_query_params()
+             st.experimental_set_query_params()
             st.rerun()
 
     search_results = []

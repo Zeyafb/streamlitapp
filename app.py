@@ -3,7 +3,6 @@ import os
 import json
 import streamlit as st
 
-
 # Set default layout to wide mode
 st.set_page_config(layout="wide")
 
@@ -25,22 +24,22 @@ def highlight_text(text, phrases):
 
 
 def navigate_to_question(part_name, question_number):
-    """Sets query parameters to navigate to a specific question."""
+    """Navigates to a specific question without using URL query parameters."""
     if part_name and question_number:
-        st.experimental_set_query_params(part=part_name, question=str(question_number))
-        st.rerun()  # Rerun the app with updated parameters
+        st.session_state['selected_part'] = part_name
+        if part_name not in st.session_state:
+            initialize_part_session_state(part_name)
+        st.session_state[part_name]['current_question'] = int(question_number) - 1
+        st.rerun()
 
 
-def initialize_part_session_state(part_name, question_number=None):
+def initialize_part_session_state(part_name):
     """Initializes the session state for a given part."""
     if part_name not in st.session_state:
         st.session_state[part_name] = {
-            'current_question': 0 if question_number is None else question_number - 1,
+            'current_question': 0,
             'answers': {},
         }
-    else:
-        if question_number is not None:
-            st.session_state[part_name]['current_question'] = question_number - 1
 
 
 def display_question(question, selected_options):
@@ -114,30 +113,7 @@ def display_question_map(session_state, total_questions):
 
 
 def main():
-    # Handle navigation from query parameters
-    query_params = st.experimental_get_query_params()
-    if "part" in query_params and "question" in query_params:
-        part_name = query_params.get("part", [None])[0]
-        question_number = query_params.get("question", [None])[0]
-        try:
-            question_number = int(question_number)
-            st.session_state["part_name"] = part_name
-            st.session_state["current_question"] = question_number - 1
-        except (ValueError, TypeError):
-            st.error("Invalid query parameter value for 'question'")
-        st.stop()  # Stop execution to reload with updated session state
-
     st.title("Practice Exam Simulator")
-
-    # Handle query parameters
-    query_params = st.experimental_get_query_params()
-    part_name = query_params.get("part", [None])[0]
-    question_number = query_params.get("question", [None])[0]
-    if question_number is not None:
-        try:
-            question_number = int(question_number)
-        except (ValueError, TypeError):
-            question_number = None
 
     # Load questions
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -162,23 +138,24 @@ def main():
 
     # Part selection
     st.sidebar.header("Select Part")
-    selected_part = st.sidebar.selectbox("Choose a part:", parts)
+    if 'selected_part' not in st.session_state:
+        st.session_state['selected_part'] = parts[0]
+    selected_part = st.sidebar.selectbox("Choose a part:", parts, index=parts.index(st.session_state['selected_part']))
+    st.session_state['selected_part'] = selected_part
     part_name = selected_part
 
     # Initialize session state for navigation
-    initialize_part_session_state(part_name, question_number)
+    initialize_part_session_state(part_name)
 
     session_state = st.session_state[part_name]
 
     # Search functionality
     st.sidebar.header("Search Questions")
-    search_query = st.sidebar.text_input("Enter a keyword or phrase to search:")
-    st.session_state["search_query"] = search_query
+    search_query = st.sidebar.text_input("Enter a keyword or phrase to search:", key='search_query')
 
     if search_query:
         if st.sidebar.button("Return to Exam"):
-            st.session_state["search_query"] = ""
-            st.experimental_set_query_params()
+            st.session_state['search_query'] = ""
             st.rerun()
 
     search_results = []

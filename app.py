@@ -23,7 +23,9 @@ def highlight_text(text, phrases):
 def navigate_to_question(part_name, question_number):
     """Sets query parameters to navigate to a specific question."""
     st.experimental_set_query_params(part=part_name, question=question_number)
-    st.rerun()
+    # Avoid rerunning immediately after setting query parameters
+    st.session_state['navigate_to'] = {'part': part_name, 'question': question_number}
+
 
 
 def initialize_part_session_state(part_name, question_number=None):
@@ -178,6 +180,11 @@ def main():
     # Load questions
     current_dir = os.path.dirname(os.path.abspath(__file__))
     json_file = os.path.join(current_dir, 'questions_by_part.json')
+    if 'navigate_to' in st.session_state:
+    navigate_to = st.session_state.pop('navigate_to', None)
+    if navigate_to:
+        st.experimental_set_query_params(part=navigate_to['part'], question=navigate_to['question'])
+        st.stop()  # Gracefully stop execution to avoid further conflicts
 
     try:
         with open(json_file, 'r', encoding='utf-8') as f:

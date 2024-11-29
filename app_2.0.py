@@ -26,7 +26,7 @@ def navigate_to_question(exam_session, question_number):
     """Navigates to a specific question in the exam."""
     if exam_session:
         exam_session['current_question'] = question_number - 1
-        st.experimental_rerun()
+        st.rerun()
     else:
         st.error("No exam is currently active.")
 
@@ -82,12 +82,12 @@ def display_navigation_controls(session_state, total_questions):
         if st.button("Previous", key=f"prev_{session_state['current_question']}"):
             if session_state['current_question'] > 0:
                 session_state['current_question'] -= 1
-                st.experimental_rerun()
+                st.rerun()
     with col2:
         if st.button("Next", key=f"next_{session_state['current_question']}"):
             if session_state['current_question'] < total_questions - 1:
                 session_state['current_question'] += 1
-                st.experimental_rerun()
+                st.rerun()
 
 def display_question_map(session_state, total_questions):
     """Displays a collapsible question map."""
@@ -98,7 +98,7 @@ def display_question_map(session_state, total_questions):
             label = f"{q_num}"
             if col.button(label, key=f"qmap_{q_num}"):
                 session_state['current_question'] = q_num - 1
-                st.experimental_rerun()
+                st.rerun()
 
 def main():
     st.title("Practice Exam Simulator")
@@ -168,7 +168,7 @@ def main():
             status = 'Completed' if ex['completed'] else 'In Progress'
             if st.sidebar.button(f"{eid} ({status})", key=f"history_{eid}"):
                 st.session_state['current_exam'] = eid
-                st.experimental_rerun()
+                st.rerun()
     else:
         st.sidebar.write("No exams found.")
 
@@ -248,7 +248,7 @@ def main():
         # Save the exam to history
         st.session_state['exam_history'][exam_id] = exam_session
         st.session_state['current_exam'] = exam_id
-        st.experimental_rerun()
+        st.rerun()
 
     # Display the current exam if one is active and not searching
     if 'current_exam' in st.session_state and not search_query:
@@ -319,7 +319,7 @@ def display_exam_interface(exam_session):
     # Option to go back to exam list
     if st.button("Back to Exam List"):
         del st.session_state['current_exam']
-        st.experimental_rerun()
+        st.rerun()
 
 if __name__ == "__main__":
     main()

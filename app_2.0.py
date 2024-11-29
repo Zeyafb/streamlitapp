@@ -100,12 +100,34 @@ def display_question_map(session_state, total_questions):
                 session_state['current_question'] = q_num - 1
                 st.rerun()
 
+def save_exam_history(exam_history):
+    """Saves the exam history to a JSON file."""
+    try:
+        with open('exam_history.json', 'w', encoding='utf-8') as f:
+            json.dump(exam_history, f)
+    except Exception as e:
+        st.error(f"Error saving exam history: {e}")
+
+def load_exam_history():
+    """Loads the exam history from a JSON file."""
+    if os.path.exists('exam_history.json'):
+        try:
+            with open('exam_history.json', 'r', encoding='utf-8') as f:
+                exam_history = json.load(f)
+            # Convert keys back to integers if necessary
+            return exam_history
+        except Exception as e:
+            st.error(f"Error loading exam history: {e}")
+            return {}
+    else:
+        return {}
+
 def main():
     st.title("Practice Exam Simulator")
 
-    # Initialize exam history
+    # Load exam history from file
     if 'exam_history' not in st.session_state:
-        st.session_state['exam_history'] = {}
+        st.session_state['exam_history'] = load_exam_history()
 
     # Load questions
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -248,6 +270,7 @@ def main():
         # Save the exam to history
         st.session_state['exam_history'][exam_id] = exam_session
         st.session_state['current_exam'] = exam_id
+        save_exam_history(st.session_state['exam_history'])  # Save to file
         st.rerun()
 
     # Display the current exam if one is active and not searching
@@ -293,6 +316,7 @@ def display_exam_interface(exam_session):
         exam['completed'] = True
         st.success(f"You scored {correct_count} out of {total_questions} ({score:.2f}%)")
         st.session_state['exam_history'][exam['exam_id']] = exam
+        save_exam_history(st.session_state['exam_history'])  # Save to file
 
     if exam['completed']:
         st.success(f"Exam completed. Your score: {exam['score']:.2f}%")

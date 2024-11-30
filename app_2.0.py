@@ -34,7 +34,11 @@ def display_question(exam_session, question, selected_options):
     num_correct = len(correct_answer)
 
     question_number = exam_session['current_question'] + 1
-    answer_key = f"answered_{question_number}"
+    question_id = str(question['id'])  # Ensure ID is always a string
+
+    # Check if the question has already been answered
+    exam_history = load_exam_history()
+    answered_data = exam_history.get(question_id)
 
     if num_correct > 1:
         st.info(f"This question requires selecting {num_correct} answers.")
@@ -48,26 +52,28 @@ def display_question(exam_session, question, selected_options):
 
         # Provide feedback if the user has selected the required number of options
         if len(new_selected_options) == num_correct:
-            if set(new_selected_options) == set(correct_answer):
+            correct = set(new_selected_options) == set(correct_answer)
+            save_exam_history(question_id, {"correct": correct, "selected": new_selected_options})
+            exam_session['answers'][question_number] = new_selected_options
+            exam_session['answered_questions'].add(question_number)
+            if correct:
                 st.success("Correct!")
             else:
                 st.error("Incorrect.")
                 st.markdown("**Correct answer(s):**")
                 for opt in correct_answer:
                     st.markdown(f"- **{opt}. {question['options'].get(opt, 'Option not found')}**")
-            exam_session['answers'][question_number] = new_selected_options
-            exam_session['answered_questions'].add(question_number)
     else:
         st.info("This question requires selecting 1 answer.")
 
-        # Check if the question has been answered
-        if question_number in exam_session['answered_questions']:
-            # Display options with feedback
+        # If the question is already answered, show feedback
+        if answered_data:
+            selected_option = answered_data['selected'][0]
             for key in option_keys:
                 option_text = f"{key}. {options[key]}"
                 if key == correct_answer[0]:
                     color = '#d4edda'  # Light green for correct
-                elif key == selected_options[0]:
+                elif key == selected_option:
                     color = '#f8d7da'  # Light red for incorrect selection
                 else:
                     color = None
@@ -81,10 +87,12 @@ def display_question(exam_session, question, selected_options):
                 option_text = f"{key}. {options[key]}"
                 if st.button(option_text, key=f"option_{question_number}_{key}"):
                     selected_option = key
+                    correct = selected_option == correct_answer[0]
+                    save_exam_history(question_id, {"correct": correct, "selected": [selected_option]})
                     exam_session['answers'][question_number] = [selected_option]
                     exam_session['answered_questions'].add(question_number)
                     # Provide immediate feedback
-                    if selected_option == correct_answer[0]:
+                    if correct:
                         st.success("Correct!")
                     else:
                         st.error(f"Incorrect. The correct answer is {correct_answer[0]}. {options[correct_answer[0]]}")
@@ -135,33 +143,22 @@ def save_exam_history(question_id, data):
 
 
 def load_exam_history():
-    """Loads the exam history from a JSON file."""
+    """Loads the exam history JSON file."""
     if os.path.exists('exam_history.json'):
         try:
             with open('exam_history.json', 'r', encoding='utf-8') as f:
-                exam_history = json.load(f)
-            # Convert set strings back to sets
-            for ex in exam_history.values():
-                ex['answered_questions'] = set(ex['answered_questions'])
-            return exam_history
+                return json.load(f)
         except Exception as e:
             st.error(f"Error loading exam history: {e}")
             return {}
-    else:
-        return {}
+    return {}
+
 
 def load_used_question_ids():
-    """Loads the set of used question IDs."""
-    if os.path.exists('used_questions.json'):
-        try:
-            with open('used_questions.json', 'r', encoding='utf-8') as f:
-                used_question_ids = set(json.load(f))
-            return used_question_ids
-        except Exception as e:
-            st.error(f"Error loading used questions: {e}")
-            return set()
-    else:
-        return set()
+    """Loads the set of used question IDs from the exam history."""
+    exam_history = load_exam_history()
+    return set(exam_history.keys())
+
 
 def save_used_question_ids(used_question_ids):
     """Saves the set of used question IDs."""

@@ -267,6 +267,31 @@ def main():
     else:
         st.write("Click 'Start New Practice Test' in the sidebar to begin.")
 
+def display_navigation_controls(exam, total_questions):
+    """Displays navigation controls for the exam."""
+    current_question_index = exam['current_question']
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    # Back Button
+    if col1.button("Previous", key="prev"):
+        if current_question_index > 0:
+            exam['current_question'] -= 1
+            st.experimental_rerun()
+    
+    # Next Button
+    if col3.button("Next", key="next"):
+        if current_question_index < total_questions - 1:
+            exam['current_question'] += 1
+            st.experimental_rerun()
+
+    # Display Progress
+    col2.markdown(
+        f"<div style='text-align: center; font-weight: bold;'>"
+        f"Question {current_question_index + 1} of {total_questions}"
+        f"</div>", 
+        unsafe_allow_html=True
+    )
 
 def display_exam_interface(exam_session):
     """Displays the interface for the exam."""

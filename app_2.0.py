@@ -23,76 +23,111 @@ def display_question(exam_session, question, selected_options):
     """Displays the question and options, and handles user interactions."""
     st.write("---")
 
+    # Initialize selected_option
+    selected_option = None
+
     # Display the question text
     question_text = question['question_text']
-    st.write(question_text)
+    st.markdown(f"<div style='text-align: left; font-size: 18px;'>{question_text}</div>", unsafe_allow_html=True)
+
     # Display the origin of the question
-    question_origin_html = f"""
-    <div class='question-origin'>Source: {question['origin']}</div>
-    """
+    question_origin_html = f"<div style='text-align: left; font-style: italic;'>Source: {question['origin']}</div>"
     st.markdown(question_origin_html, unsafe_allow_html=True)
+
     # Display the options
     options = question['options']
-    option_keys = list(options.keys())
     correct_answer = question.get('correct_answer', [])
     num_correct = len(correct_answer)
-
     question_number = exam_session['current_question'] + 1
-    answer_key = f"answered_{question_number}"
 
+    # Style for buttons
+    button_css = """
+    <style>
+        .custom-button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .custom-button:hover {
+            background-color: #e0e0e0;
+        }
+    </style>
+    """
+    st.markdown(button_css, unsafe_allow_html=True)
+
+    # Logic for multi-answer questions
     if num_correct > 1:
         st.info(f"This question requires selecting {num_correct} answers.")
         new_selected_options = []
-        for key in option_keys:
-            checkbox_id = f"{question['question_number']}_{key}"
+
+        # Checkboxes for each option
+        for key, value in options.items():
+            checkbox_id = f"{question_number}_{key}"
             checked = key in selected_options
-            option_text = f"{key}. {options[key]}"
-            if st.checkbox(option_text, key=checkbox_id, value=checked):
+            if st.checkbox(f"{key}. {value}", key=checkbox_id, value=checked):
                 new_selected_options.append(key)
 
-        # Provide feedback if the user has selected the required number of options
-        if len(new_selected_options) == num_correct:
+        # Submit button to confirm selection
+        if st.button("Submit Answer"):
+            exam_session['answers'][question_number] = new_selected_options
+            exam_session['answered_questions'].add(question_number)
+
+            # Validate answers
             if set(new_selected_options) == set(correct_answer):
                 st.success("Correct!")
             else:
-                st.error("Incorrect.")
-                st.markdown("**Correct answer(s):**")
-                for opt in correct_answer:
-                    st.markdown(f"- **{opt}. {question['options'].get(opt, 'Option not found')}**")
-            exam_session['answers'][question_number] = new_selected_options
-            exam_session['answered_questions'].add(question_number)
+                st.error(f"Incorrect. The correct answers are: {', '.join(correct_answer)}")
+            st.experimental_rerun()
+
     else:
         st.info("This question requires selecting 1 answer.")
 
         # Check if the question has been answered
-        if question_number in exam_session['answered_questions']:
-            # Display options with feedback
-            for key in option_keys:
-                option_text = f"{key}. {options[key]}"
-                if key == correct_answer[0]:
-                    color = '#d4edda'  # Light green for correct
-                elif key == selected_options[0]:
-                    color = '#f8d7da'  # Light red for incorrect selection
-                else:
-                    color = None
-                if color:
-                    st.markdown(highlight_text(option_text, color), unsafe_allow_html=True)
-                else:
-                    st.write(option_text)
+        if question_number in exam_session['answers']:
+            selected_option = exam_session['answers'][question_number][0]
+            # Display selected option and feedback
+            st.write(f"You selected: **{selected_option}. {options[selected_option]}**")
+            if selected_option in correct_answer:
+                st.success("Correct!")
+            else:
+                st.error(f"Incorrect. The correct answer is: {', '.join(correct_answer)}")
         else:
             # Display options as buttons
-            for key in option_keys:
-                option_text = f"{key}. {options[key]}"
-                if st.button(option_text, key=f"option_{question_number}_{key}"):
+            for key, value in options.items():
+                if st.button(f"{key}. {value}", key=f"option_{question_number}_{key}"):
                     selected_option = key
+                    # Process the selection
                     exam_session['answers'][question_number] = [selected_option]
                     exam_session['answered_questions'].add(question_number)
-                    # Provide immediate feedback
-                    if selected_option == correct_answer[0]:
+                    st.write(f"You selected: **{selected_option}. {value}**")
+                    if selected_option in correct_answer:
                         st.success("Correct!")
                     else:
-                        st.error(f"Incorrect. The correct answer is {correct_answer[0]}. {options[correct_answer[0]]}")
-                    st.rerun()
+                        st.error(f"Incorrect. The correct answer is: {', '.join(correct_answer)}")
+                    # Rerun to update the interface
+                    st.experimental_rerun()
+
+def display_navigation_controls(session_state, total_questions):
+    """Displays navigation controls for the exam."""
+    st.write("---")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Previous", key=f"prev_{session_state['current_question']}"):
+            if session_state['current_question'] > 0:
+                session_state['current_question'] -= 1
+                st.experimental_rerun()
+    with col2:
+        if st.button("Next", key=f"next_{session_state['current_question']}"):
+            if session_state['current_question'] < total_questions - 1:
+                session_state['current_question'] += 1
+                st.experimental_rerun()
 
 def display_question_map(session_state, total_questions):
     """Displays a collapsible question map."""
@@ -105,13 +140,19 @@ def display_question_map(session_state, total_questions):
                 label += " ✅"
             if col.button(label, key=f"qmap_{q_num}"):
                 session_state['current_question'] = q_num - 1
-                st.rerun()
+                st.experimental_rerun()
 
 def save_exam_history(exam_history):
     """Saves the exam history to a JSON file."""
     try:
+        serializable_exam_history = {}
+        for eid, ex in exam_history.items():
+            ex_copy = ex.copy()
+            # Convert 'answered_questions' set to list
+            ex_copy['answered_questions'] = list(ex_copy['answered_questions'])
+            serializable_exam_history[eid] = ex_copy
         with open('exam_history.json', 'w', encoding='utf-8') as f:
-            json.dump(exam_history, f)
+            json.dump(serializable_exam_history, f)
     except Exception as e:
         st.error(f"Error saving exam history: {e}")
 
@@ -121,7 +162,7 @@ def load_exam_history():
         try:
             with open('exam_history.json', 'r', encoding='utf-8') as f:
                 exam_history = json.load(f)
-            # Convert set strings back to sets
+            # Convert 'answered_questions' lists back to sets
             for ex in exam_history.values():
                 ex['answered_questions'] = set(ex['answered_questions'])
             return exam_history
@@ -187,7 +228,6 @@ def main():
             question['origin'] = f"{part_name}, Question {idx + 1}"  # Add origin metadata
             all_questions.append(question)
 
-
     # Ensure all questions have a unique ID
     for idx, question in enumerate(all_questions):
         if 'id' not in question:
@@ -223,13 +263,14 @@ def main():
                 score = ""
             if st.sidebar.button(f"{eid} ({status}) {score}", key=f"history_{eid}"):
                 st.session_state['current_exam'] = eid
-                st.rerun()
+                st.experimental_rerun()
     else:
         st.sidebar.write("No exams taken yet.")
 
     # Handle starting a new exam
     if start_exam:
         # Determine number of questions for the exam
+        remaining_questions_count = len(remaining_questions)
         if remaining_questions_count >= 65:
             exam_questions = random.sample(remaining_questions, 65)
         else:
@@ -258,7 +299,7 @@ def main():
         st.session_state['exam_history'][exam_id] = exam_session
         st.session_state['current_exam'] = exam_id
         save_exam_history(st.session_state['exam_history'])  # Save to file
-        st.rerun()
+        st.experimental_rerun()
 
     # Display the current exam if one is active
     if 'current_exam' in st.session_state:
@@ -266,32 +307,6 @@ def main():
         display_exam_interface(exam_session)
     else:
         st.write("Click 'Start New Practice Test' in the sidebar to begin.")
-
-def display_navigation_controls(exam, total_questions):
-    """Displays navigation controls for the exam."""
-    current_question_index = exam['current_question']
-    
-    col1, col2, col3 = st.columns([1, 2, 1])
-    
-    # Back Button
-    if col1.button("Previous", key="prev"):
-        if current_question_index > 0:
-            exam['current_question'] -= 1
-            st.experimental_rerun()
-    
-    # Next Button
-    if col3.button("Next", key="next"):
-        if current_question_index < total_questions - 1:
-            exam['current_question'] += 1
-            st.experimental_rerun()
-
-    # Display Progress
-    col2.markdown(
-        f"<div style='text-align: center; font-weight: bold;'>"
-        f"Question {current_question_index + 1} of {total_questions}"
-        f"</div>", 
-        unsafe_allow_html=True
-    )
 
 def display_exam_interface(exam_session):
     """Displays the interface for the exam."""
@@ -356,7 +371,7 @@ def display_exam_interface(exam_session):
     # Option to go back to exam list
     if st.button("Back to Exam List"):
         del st.session_state['current_exam']
-        st.rerun()
+        st.experimental_rerun()
 
 if __name__ == "__main__":
     main()

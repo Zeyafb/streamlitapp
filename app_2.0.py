@@ -204,8 +204,9 @@ def save_used_question_ids(used_question_ids):
     try:
         with open('used_questions.json', 'w', encoding='utf-8') as f:
             json.dump(list(used_question_ids), f)
-        except Exception as e:
-            st.error(f"Error saving used questions: {e}")
+    except Exception as e:
+        st.error(f"Error saving used questions: {e}")
+
 
 def main():
     st.title("Practice Exam Simulator")

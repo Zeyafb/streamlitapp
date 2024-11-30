@@ -24,18 +24,13 @@ def display_question(exam_session, question, selected_options):
     st.write("---")
 
     # Custom CSS for styling
+    # Inject custom CSS for options
     custom_css = """
     <style>
-    .question-text {
-        font-size: 18px;
-        font-weight: bold;
-        margin-bottom: 20px;
-        text-align: left; /* Align text to the left */
-    }
     .option-button {
         display: block;
         width: 100%;
-        text-align: left; /* Align text to the left */
+        text-align: left;
         padding: 10px;
         margin: 5px 0;
         border-radius: 5px;

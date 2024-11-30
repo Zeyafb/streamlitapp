@@ -24,21 +24,22 @@ def display_question(exam_session, question, selected_options):
     st.write("---")
 
     # Display the question text
-    question_text = question['question_text']
+    question_text = question.get('question_text', "No question text provided.")
     st.markdown(f"<div style='text-align: left; font-size: 18px;'>{question_text}</div>", unsafe_allow_html=True)
 
     # Display the origin of the question
-    question_origin_html = f"<div style='text-align: left; font-style: italic;'>Source: {question['origin']}</div>"
+    question_origin = question.get('origin', "Unknown source.")
+    question_origin_html = f"<div style='text-align: left; font-style: italic;'>Source: {question_origin}</div>"
     st.markdown(question_origin_html, unsafe_allow_html=True)
 
-    # Display the options
-    options = question['options']
+    # Extract question details
+    options = question.get('options', {})
     correct_answer = question.get('correct_answer', [])
     num_correct = len(correct_answer)
-    question_number = exam_session['current_question'] + 1
-    selected_option = None
+    question_number = exam_session.get('current_question', 0) + 1
+    new_selected_options = []
 
-    # Style for buttons
+    # Style for buttons and checkboxes
     button_css = """
     <style>
         .custom-button {
@@ -62,35 +63,42 @@ def display_question(exam_session, question, selected_options):
 
     if num_correct > 1:
         st.info(f"This question requires selecting {num_correct} answers.")
-        new_selected_options = []
-        for key in option_keys:
-            checkbox_id = f"{question['question_number']}_{key}"
+        for key, value in options.items():
+            checkbox_id = f"{question_number}_{key}"
             checked = key in selected_options
-            option_text = f"{key}. {options[key]}"
-            if st.checkbox(option_text, key=checkbox_id, value=checked):
+            if st.checkbox(f"{key}. {value}", key=checkbox_id, value=checked):
                 new_selected_options.append(key)
-        return new_selected_options
+
+        # Update session state for multiple answers
+        exam_session['answers'][question_number] = new_selected_options
+        exam_session['answered_questions'].add(question_number)
+
+        # Validate answers if submitted
+        if set(new_selected_options) == set(correct_answer):
+            st.success("Correct!")
+        else:
+            st.error(f"Incorrect. The correct answers are: {', '.join(correct_answer)}")
+
     else:
         st.info("This question requires selecting 1 answer.")
 
-        # Render options as custom HTML buttons
+        # Render options as custom buttons
         for key, value in options.items():
-            button_html = f"""
-            <button class='custom-button' onClick="window.location.href='/{key}'">{key}. {value}</button>
-            """
-            st.markdown(button_html, unsafe_allow_html=True)
-            if st.session_state.get(f"selected_{question_number}_{key}", False):
-                selected_option = key
+            button_clicked = st.button(f"{key}. {value}", key=f"{question_number}_{key}")
+            if button_clicked:
+                new_selected_options = [key]
+                exam_session['answers'][question_number] = new_selected_options
+                exam_session['answered_questions'].add(question_number)
 
-        # Handle selected option
-        if selected_option:
-            exam_session['answers'][question_number] = [selected_option]
-            exam_session['answered_questions'].add(question_number)
-            if selected_option in correct_answer:
-                st.success("Correct!")
-            else:
-                st.error(f"Incorrect. The correct answer is: {', '.join(correct_answer)}")
-            st.rerun()
+                # Validate the answer immediately
+                if key in correct_answer:
+                    st.success("Correct!")
+                else:
+                    st.error(f"Incorrect. The correct answer is: {', '.join(correct_answer)}")
+
+                # Stop further rendering to avoid duplicate clicks
+                st.rerun()
+
 
 def display_navigation_controls(session_state, total_questions):
     """Displays navigation controls for the exam."""

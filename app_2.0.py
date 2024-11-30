@@ -25,12 +25,12 @@ def display_question(exam_session, question, selected_options):
 
     # Display the question text
     question_text = question['question_text']
-    st.write(question_text)
+    st.markdown(f"<div style='text-align: left;'>{question_text}</div>", unsafe_allow_html=True)
+
     # Display the origin of the question
-    question_origin_html = f"""
-    <div class='question-origin'>Source: {question['origin']}</div>
-    """
+    question_origin_html = f"<div style='text-align: left;'><em>Source: {question['origin']}</em></div>"
     st.markdown(question_origin_html, unsafe_allow_html=True)
+
     # Display the options
     options = question['options']
     option_keys = list(options.keys())
@@ -39,6 +39,7 @@ def display_question(exam_session, question, selected_options):
 
     question_number = exam_session['current_question'] + 1
     answer_key = f"answered_{question_number}"
+
 
     if num_correct > 1:
         st.info(f"This question requires selecting {num_correct} answers.")

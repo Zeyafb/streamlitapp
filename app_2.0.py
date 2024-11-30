@@ -15,7 +15,7 @@ def navigate_to_question(exam_session, question_number):
     """Navigates to a specific question in the exam."""
     if exam_session:
         exam_session['current_question'] = question_number - 1
-        st.experimental_rerun()
+        st.rerun()
     else:
         st.error("No exam is currently active.")
 
@@ -87,7 +87,7 @@ def display_question(exam_session, question, selected_options):
                     st.success("Correct!")
                 else:
                     st.error(f"Incorrect. The correct answers are: {', '.join(correct_answer)}")
-                st.experimental_rerun()
+                st.rerun()
     else:
         st.info("This question requires selecting 1 answer.")
 
@@ -126,7 +126,7 @@ def display_question(exam_session, question, selected_options):
                     else:
                         st.error(f"Incorrect. The correct answer is: {', '.join(correct_answer)}")
                     # Rerun to update the interface
-                    st.experimental_rerun()
+                    st.rerun()
 
 def display_navigation_controls(session_state, total_questions):
     """Displays navigation controls for the exam."""
@@ -136,12 +136,12 @@ def display_navigation_controls(session_state, total_questions):
         if st.button("Previous", key=f"prev_{session_state['current_question']}"):
             if session_state['current_question'] > 0:
                 session_state['current_question'] -= 1
-                st.experimental_rerun()
+                st.rerun()
     with col2:
         if st.button("Next", key=f"next_{session_state['current_question']}"):
             if session_state['current_question'] < total_questions - 1:
                 session_state['current_question'] += 1
-                st.experimental_rerun()
+                st.rerun()
 
 def display_question_map(session_state, total_questions):
     """Displays a collapsible question map."""
@@ -154,7 +154,7 @@ def display_question_map(session_state, total_questions):
                 label += " ✅"
             if col.button(label, key=f"qmap_{q_num}"):
                 session_state['current_question'] = q_num - 1
-                st.experimental_rerun()
+                st.rerun()
 
 def save_exam_history(exam_history):
     """Saves the exam history to a JSON file."""
@@ -278,7 +278,7 @@ def main():
                 score = ""
             if st.sidebar.button(f"{eid} ({status}) {score}", key=f"history_{eid}"):
                 st.session_state['current_exam'] = eid
-                st.experimental_rerun()
+                st.rerun()
     else:
         st.sidebar.write("No exams taken yet.")
 
@@ -314,7 +314,7 @@ def main():
         st.session_state['exam_history'][exam_id] = exam_session
         st.session_state['current_exam'] = exam_id
         save_exam_history(st.session_state['exam_history'])  # Save to file
-        st.experimental_rerun()
+        st.rerun()
 
     # Display the current exam if one is active
     if 'current_exam' in st.session_state:
@@ -386,7 +386,7 @@ def display_exam_interface(exam_session):
     # Option to go back to exam list
     if st.button("Back to Exam List"):
         del st.session_state['current_exam']
-        st.experimental_rerun()
+        st.rerun()
 
 if __name__ == "__main__":
     main()

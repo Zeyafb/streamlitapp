@@ -62,20 +62,14 @@ def display_question(exam_session, question, selected_options):
 
     if num_correct > 1:
         st.info(f"This question requires selecting {num_correct} answers.")
-        selected_options = st.multiselect("Select your answers:", [f"{key}. {value}" for key, value in options.items()])
-        selected_keys = [opt.split(".")[0] for opt in selected_options]
-
-        # Check if the selected answers are correct
-        if len(selected_keys) == num_correct:
-            if set(selected_keys) == set(correct_answer):
-                st.success("Correct!")
-            else:
-                st.error("Incorrect.")
-                st.markdown("**Correct answer(s):**")
-                for opt in correct_answer:
-                    st.markdown(f"- **{opt}. {options.get(opt, 'Option not found')}**")
-            exam_session['answers'][question_number] = selected_keys
-            exam_session['answered_questions'].add(question_number)
+        new_selected_options = []
+        for key in option_keys:
+            checkbox_id = f"{question['question_number']}_{key}"
+            checked = key in selected_options
+            option_text = f"{key}. {options[key]}"
+            if st.checkbox(option_text, key=checkbox_id, value=checked):
+                new_selected_options.append(key)
+        return new_selected_options
     else:
         st.info("This question requires selecting 1 answer.")
 

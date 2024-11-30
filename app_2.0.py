@@ -23,7 +23,7 @@ def display_question(exam_session, question, selected_options):
     """Displays the question and options, and handles user interactions."""
     st.write("---")
 
-    # Display the question text
+# Display the question text
     question_text = question['question_text']
     st.markdown(f"<div style='text-align: left; font-size: 18px;'>{question_text}</div>", unsafe_allow_html=True)
 
@@ -37,7 +37,7 @@ def display_question(exam_session, question, selected_options):
     num_correct = len(correct_answer)
     question_number = exam_session['current_question'] + 1
 
-    # Add CSS styles for buttons
+   # Style for buttons
     button_css = """
     <style>
         .custom-button {
@@ -83,25 +83,27 @@ def display_question(exam_session, question, selected_options):
                 st.error(f"Incorrect. The correct answers are: {', '.join(correct_answer)}")
             st.rerun()
 
-    # Logic for single-answer questions
     else:
         st.info("This question requires selecting 1 answer.")
 
-        selected_option = None
+        # Render options as custom HTML buttons
         for key, value in options.items():
-            button_clicked = st.button(f"{key}. {value}", key=f"{question_number}_{key}")
-            if button_clicked:
+            button_html = f"""
+            <button class='custom-button' onClick="window.location.href='/{key}'">{key}. {value}</button>
+            """
+            st.markdown(button_html, unsafe_allow_html=True)
+            if st.session_state.get(f"selected_{question_number}_{key}", False):
                 selected_option = key
 
-                # Save the selected option and validate immediately
-                exam_session['answers'][question_number] = [selected_option]
-                exam_session['answered_questions'].add(question_number)
-
-                if selected_option in correct_answer:
-                    st.success("Correct!")
-                else:
-                    st.error(f"Incorrect. The correct answer is: {', '.join(correct_answer)}")
-                st.rerun()
+        # Handle selected option
+        if selected_option:
+            exam_session['answers'][question_number] = [selected_option]
+            exam_session['answered_questions'].add(question_number)
+            if selected_option in correct_answer:
+                st.success("Correct!")
+            else:
+                st.error(f"Incorrect. The correct answer is: {', '.join(correct_answer)}")
+            st.rerun()
 
 def display_navigation_controls(session_state, total_questions):
     """Displays navigation controls for the exam."""

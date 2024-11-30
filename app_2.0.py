@@ -50,7 +50,7 @@ def display_question(exam_session, question, selected_options):
             checked = key in selected_options
             option_text = f"{key}. {options[key]}"
             # Apply left alignment for checkboxes
-            st.markdown(f"<div style='text-align: left; font-size: 16px;'>{option_text}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='text-align: left; font-size: 12px;'>{option_text}</div>", unsafe_allow_html=True)
             if st.checkbox(option_text, key=checkbox_id, value=checked):
                 new_selected_options.append(key)
 
@@ -82,11 +82,11 @@ def display_question(exam_session, question, selected_options):
                 # Highlight selected options
                 if color:
                     st.markdown(
-                        f"<div style='background-color: {color}; text-align: left; font-size: 16px;'>{option_text}</div>",
+                        f"<div style='background-color: {color}; text-align: left; font-size: 12px;'>{option_text}</div>",
                         unsafe_allow_html=True,
                     )
                 else:
-                    st.markdown(f"<div style='text-align: left; font-size: 16px;'>{option_text}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='text-align: left; font-size: 12px;'>{option_text}</div>", unsafe_allow_html=True)
         else:
             # Display options as buttons
             for key in option_keys:

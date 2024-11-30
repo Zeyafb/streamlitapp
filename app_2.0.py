@@ -144,6 +144,20 @@ def display_question(exam_session, question, selected_options):
                         st.error(f"Incorrect. The correct answer is: {', '.join(correct_answer)}")
                     st.rerun()
 
+    # Navigation buttons
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:
+        st.markdown('<div class="navigation-button">', unsafe_allow_html=True)
+        st.button("Previous")
+    with col2:
+        st.markdown('<div class="navigation-button">', unsafe_allow_html=True)
+        st.button("Next")
+    with col3:
+        st.markdown('<div class="navigation-button">', unsafe_allow_html=True)
+        st.button("Back to Exam List")
+
+
+
 
 def display_navigation_controls(session_state, total_questions):
     """Displays navigation controls for the exam."""
@@ -160,32 +174,17 @@ def display_navigation_controls(session_state, total_questions):
                 session_state['current_question'] += 1
                 st.rerun()
 
-def display_navigation_controls(session_state, total_questions):
-    """Displays navigation controls for the exam."""
-    st.write("---")
-
-    # Use three columns for better layout if needed
-    col1, col2, col3 = st.columns([1, 1, 1])
-    
-    with col1:
-        # Previous Button
-        if st.button("Previous", key=f"prev_{session_state['current_question']}"):
-            if session_state['current_question'] > 0:
-                session_state['current_question'] -= 1
-                st.rerun()
-
-    with col2:
-        # Optional: Add a "Back to Exam List" button in the middle column
-        if st.button("Back to Exam List", key="back_to_list"):
-            session_state['current_question'] = 0  # Reset to the start or any desired state
-            session_state['exam_view'] = "list"  # Assuming 'list' is the view for the exam list
-            st.rerun()
-
-    with col3:
-        # Next Button
-        if st.button("Next", key=f"next_{session_state['current_question']}"):
-            if session_state['current_question'] < total_questions - 1:
-                session_state['current_question'] += 1
+def display_question_map(session_state, total_questions):
+    """Displays a collapsible question map."""
+    with st.expander("Question Map"):
+        cols = st.columns(10)
+        for i, q_num in enumerate(range(1, total_questions + 1)):
+            col = cols[i % 10]
+            label = f"{q_num}"
+            if q_num in session_state['answered_questions']:
+                label += " ✅"
+            if col.button(label, key=f"qmap_{q_num}"):
+                session_state['current_question'] = q_num - 1
                 st.rerun()
 
 def save_exam_history(exam_history):

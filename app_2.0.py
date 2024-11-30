@@ -77,36 +77,41 @@ def display_question(exam_session, question, selected_options):
                 else:
                     st.error(f"Incorrect. The correct answers are: {', '.join(correct_answer)}")
                 st.rerun()
-    else:
-        st.info("This question requires selecting 1 answer.")
+   else:
+    st.info("This question requires selecting 1 answer.")
 
-        if question_number in exam_session['answers']:
-            selected_option = exam_session['answers'][question_number][0]
-            for key, value in options.items():
-                option_text = f"{key}. {value}"
-                if key in correct_answer:
-                    color = 'lightgreen'
-                elif key == selected_option:
-                    color = 'salmon'
-                else:
-                    color = 'white'
-                st.markdown(f"<div style='background-color: {color}; padding: 10px; border-radius:5px'>{option_text}</div>", unsafe_allow_html=True)
-            if selected_option in correct_answer:
-                st.success("Correct!")
+    if question_number in exam_session['answers']:
+        selected_option = exam_session['answers'][question_number][0]
+        for key, value in options.items():
+            option_text = f"{key}. {value}"
+            if key in correct_answer:
+                color = 'lightgreen'
+            elif key == selected_option:
+                color = 'salmon'
             else:
-                st.error(f"Incorrect. The correct answer is: {', '.join(correct_answer)}")
+                color = 'white'
+            # Apply left-aligned styling for single-answer questions
+            st.markdown(f"""
+                <div style='background-color: {color}; padding: 10px; border-radius:5px; text-align: left;'>
+                    {option_text}
+                </div>
+            """, unsafe_allow_html=True)
+        if selected_option in correct_answer:
+            st.success("Correct!")
         else:
-            # Display buttons vertically
-            for key, value in options.items():
-                if st.button(f"{key}. {value}", key=f"option_{question_number}_{key}"):
-                    selected_option = key
-                    exam_session['answers'][question_number] = [selected_option]
-                    exam_session['answered_questions'].add(question_number)
-                    if selected_option in correct_answer:
-                        st.success("Correct!")
-                    else:
-                        st.error(f"Incorrect. The correct answer is: {', '.join(correct_answer)}")
-                    st.rerun()
+            st.error(f"Incorrect. The correct answer is: {', '.join(correct_answer)}")
+    else:
+        # Display buttons vertically, ensuring left alignment
+        for key, value in options.items():
+            if st.button(f"{key}. {value}", key=f"option_{question_number}_{key}"):
+                selected_option = key
+                exam_session['answers'][question_number] = [selected_option]
+                exam_session['answered_questions'].add(question_number)
+                if selected_option in correct_answer:
+                    st.success("Correct!")
+                else:
+                    st.error(f"Incorrect. The correct answer is: {', '.join(correct_answer)}")
+                st.rerun()
 
 
 def display_navigation_controls(session_state, total_questions):

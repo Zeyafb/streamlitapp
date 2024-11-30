@@ -23,10 +23,16 @@ def display_question(exam_session, question, selected_options):
     """Displays the question and options, and handles user interactions."""
     st.write("---")
 
-    # Custom CSS for styling
-    # Inject custom CSS for options
+    # Inject custom CSS for styling
     custom_css = """
     <style>
+    .question-text {
+        font-size: 18px;
+        font-weight: bold;
+        text-align: left;
+        line-height: 1.5;
+        margin-bottom: 20px;
+    }
     .option-button {
         display: block;
         width: 100%;
@@ -53,13 +59,14 @@ def display_question(exam_session, question, selected_options):
     }
     </style>
     """
-
-    # Inject custom CSS
+    # Inject CSS into the app
     st.markdown(custom_css, unsafe_allow_html=True)
 
-    # Display the question text with styling
-    question_text = f"<div class='question-text'>{question['question_text']}</div>"
-    st.markdown(question_text, unsafe_allow_html=True)
+    # Display the question text
+    question_html = f"""
+    <div class='question-text'>{question['question_text']}</div>
+    """
+    st.markdown(question_html, unsafe_allow_html=True)
 
     # Display the instruction banner
     if len(question.get('correct_answer', [])) > 1:
@@ -71,39 +78,22 @@ def display_question(exam_session, question, selected_options):
     options = question['options']
     option_keys = list(options.keys())
     correct_answer = question.get('correct_answer', [])
-
     question_number = exam_session['current_question'] + 1
-    question_id = str(question['id'])  # Ensure ID is always a string
 
-    # Check if the question has already been answered
-    if question_number in exam_session['answered_questions']:
-        selected_option = exam_session['answers'].get(question_number, [None])[0]
-        for key in option_keys:
-            option_text = f"{key}. {options[key]}"
-            if key == correct_answer[0]:
-                color = '#d4edda'  # Light green for correct
-            elif key == selected_option:
-                color = '#f8d7da'  # Light red for incorrect selection
+    # Display options as buttons
+    for key in option_keys:
+        option_text = f"<div class='option-button'>{key}. {options[key]}</div>"
+        if st.button(f"{key}. {options[key]}", key=f"option_{question_number}_{key}"):
+            selected_option = key
+            exam_session['answers'][question_number] = [selected_option]
+            exam_session['answered_questions'].add(question_number)
+            # Provide immediate feedback
+            if selected_option == correct_answer[0]:
+                st.success("Correct!")
             else:
-                color = None
-            if color:
-                st.markdown(f"<div class='option-button' style='background-color:{color};'>{option_text}</div>", unsafe_allow_html=True)
-            else:
-                st.markdown(f"<div class='option-button'>{option_text}</div>", unsafe_allow_html=True)
-    else:
-        # Display options as buttons
-        for key in option_keys:
-            option_text = f"{key}. {options[key]}"
-            if st.button(option_text, key=f"option_{question_number}_{key}"):
-                selected_option = key
-                exam_session['answers'][question_number] = [selected_option]
-                exam_session['answered_questions'].add(question_number)
-                # Provide immediate feedback
-                if selected_option == correct_answer[0]:
-                    st.success("Correct!")
-                else:
-                    st.error(f"Incorrect. The correct answer is {correct_answer[0]}. {options[correct_answer[0]]}")
-                st.rerun()
+                st.error(f"Incorrect. The correct answer is {correct_answer[0]}. {options[correct_answer[0]]}")
+            st.rerun()
+
 
 def display_navigation_controls(session_state, total_questions):
     """Displays navigation controls for the exam."""

@@ -37,7 +37,7 @@ def display_question(exam_session, question, selected_options):
     num_correct = len(correct_answer)
     question_number = exam_session['current_question'] + 1
 
-    # Apply CSS for single-answer questions
+    # Inject CSS for single-answer questions
     if num_correct == 1:
         st.markdown(
             """
@@ -52,6 +52,22 @@ def display_question(exam_session, question, selected_options):
             """,
             unsafe_allow_html=True,
         )
+
+    # Inject CSS for shrinking navigation buttons
+    st.markdown(
+        """
+        <style>
+        div.navigation-button > button {
+            width: auto !important;
+            min-width: 100px !important;
+            padding: 5px 10px !important;
+            text-align: center !important;
+            margin: 10px !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
     # Logic for multi-answer questions
     if num_correct > 1:
@@ -127,6 +143,19 @@ def display_question(exam_session, question, selected_options):
                     else:
                         st.error(f"Incorrect. The correct answer is: {', '.join(correct_answer)}")
                     st.rerun()
+
+    # Navigation buttons
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:
+        st.markdown('<div class="navigation-button">', unsafe_allow_html=True)
+        st.button("Previous")
+    with col2:
+        st.markdown('<div class="navigation-button">', unsafe_allow_html=True)
+        st.button("Next")
+    with col3:
+        st.markdown('<div class="navigation-button">', unsafe_allow_html=True)
+        st.button("Back to Exam List")
+
 
 
 

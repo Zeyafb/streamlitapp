@@ -37,7 +37,7 @@ def display_question(exam_session, question, selected_options):
     num_correct = len(correct_answer)
     question_number = exam_session['current_question'] + 1
 
-    # Style for buttons
+    # Add CSS styles for buttons
     button_css = """
     <style>
         .custom-button {
@@ -83,28 +83,25 @@ def display_question(exam_session, question, selected_options):
                 st.error(f"Incorrect. The correct answers are: {', '.join(correct_answer)}")
             st.rerun()
 
+    # Logic for single-answer questions
     else:
         st.info("This question requires selecting 1 answer.")
 
-        # Render options using st.radio to capture the user's selection
-        selected_option = st.radio(
-            "Select your answer:",
-            list(options.keys()),
-            format_func=lambda key: f"{key}. {options[key]}",
-            key=f"radio_{question_number}",
-        )
+        selected_option = None
+        for key, value in options.items():
+            button_clicked = st.button(f"{key}. {value}", key=f"{question_number}_{key}")
+            if button_clicked:
+                selected_option = key
 
-        # Handle selected option
-        if st.button("Submit Answer"):
-            exam_session['answers'][question_number] = [selected_option]
-            exam_session['answered_questions'].add(question_number)
+                # Save the selected option and validate immediately
+                exam_session['answers'][question_number] = [selected_option]
+                exam_session['answered_questions'].add(question_number)
 
-            if selected_option in correct_answer:
-                st.success("Correct!")
-            else:
-                st.error(f"Incorrect. The correct answer is: {', '.join(correct_answer)}")
-            st.rerun()
-
+                if selected_option in correct_answer:
+                    st.success("Correct!")
+                else:
+                    st.error(f"Incorrect. The correct answer is: {', '.join(correct_answer)}")
+                st.rerun()
 
 def display_navigation_controls(session_state, total_questions):
     """Displays navigation controls for the exam."""

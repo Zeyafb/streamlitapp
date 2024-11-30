@@ -37,6 +37,21 @@ def display_question(exam_session, question, selected_options):
     num_correct = len(correct_answer)
     question_number = exam_session['current_question'] + 1
 
+    # Inject conditional CSS for single-answer questions
+    if num_correct == 1:
+        st.markdown(
+            """
+            <style>
+            div.stButton > button {
+                text-align: left !important;
+                margin: 5px 0;
+                width: 100% !important;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+
     # Logic for multi-answer questions
     if num_correct > 1:
         st.info(f"This question requires selecting {num_correct} answers.")
@@ -80,20 +95,6 @@ def display_question(exam_session, question, selected_options):
     else:
         st.info("This question requires selecting 1 answer.")
 
-        # Inject CSS to force left-aligned buttons for single-answer questions
-        st.markdown(
-            f"""
-            <style>
-            div.stButton > button {{
-                text-align: left !important;
-                margin: 5px 0;
-                width: 100% !important;
-            }}
-            </style>
-            """,
-            unsafe_allow_html=True,
-        )
-
         if question_number in exam_session['answers']:
             selected_option = exam_session['answers'][question_number][0]
             for key, value in options.items():
@@ -114,7 +115,7 @@ def display_question(exam_session, question, selected_options):
             else:
                 st.error(f"Incorrect. The correct answer is: {', '.join(correct_answer)}")
         else:
-            # Display buttons vertically, ensuring left alignment
+            # Display buttons vertically, ensuring left alignment for single-answer questions
             for key, value in options.items():
                 if st.button(f"{key}. {value}", key=f"option_{question_number}_{key}"):
                     selected_option = key

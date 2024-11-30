@@ -25,100 +25,74 @@ def display_question(exam_session, question, selected_options):
 
     # Display the question text
     question_text = question['question_text']
-    st.markdown(f"<div style='text-align: left; font-size: 18px;'>{question_text}</div>", unsafe_allow_html=True)
-
+    st.write(question_text)
     # Display the origin of the question
-    question_origin_html = f"<div style='text-align: left; font-style: italic;'>Source: {question['origin']}</div>"
+    question_origin_html = f"""
+    <div class='question-origin'>Source: {question['origin']}</div>
+    """
     st.markdown(question_origin_html, unsafe_allow_html=True)
-
     # Display the options
     options = question['options']
+    option_keys = list(options.keys())
     correct_answer = question.get('correct_answer', [])
     num_correct = len(correct_answer)
+
     question_number = exam_session['current_question'] + 1
+    answer_key = f"answered_{question_number}"
 
-    # Add CSS styles for buttons
-    button_css = """
-    <style>
-        .custom-button {
-            display: block;
-            width: 100%;
-            text-align: left;
-            background-color: #f0f0f0;
-            border: 1px solid #ccc;
-            padding: 10px;
-            margin-bottom: 10px;
-            font-size: 16px;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-        .custom-button:hover {
-            background-color: #e0e0e0;
-        }
-    </style>
-    """
-    st.markdown(button_css, unsafe_allow_html=True)
-
-    # Logic for multi-answer questions
     if num_correct > 1:
         st.info(f"This question requires selecting {num_correct} answers.")
         new_selected_options = []
-
-        # Checkboxes for each option
-        for key, value in options.items():
-            checkbox_id = f"{question_number}_{key}"
+        for key in option_keys:
+            checkbox_id = f"{question['question_number']}_{key}"
             checked = key in selected_options
-            if st.checkbox(f"{key}. {value}", key=checkbox_id, value=checked):
+            option_text = f"{key}. {options[key]}"
+            if st.checkbox(option_text, key=checkbox_id, value=checked):
                 new_selected_options.append(key)
 
-        # Submit button to confirm selection
-        if st.button("Submit Answer"):
-            exam_session['answers'][question_number] = new_selected_options
-            exam_session['answered_questions'].add(question_number)
-
-            # Validate answers
+        # Provide feedback if the user has selected the required number of options
+        if len(new_selected_options) == num_correct:
             if set(new_selected_options) == set(correct_answer):
                 st.success("Correct!")
             else:
-                st.error(f"Incorrect. The correct answers are: {', '.join(correct_answer)}")
-            st.rerun()
-
-    # Logic for single-answer questions
+                st.error("Incorrect.")
+                st.markdown("**Correct answer(s):**")
+                for opt in correct_answer:
+                    st.markdown(f"- **{opt}. {question['options'].get(opt, 'Option not found')}**")
+            exam_session['answers'][question_number] = new_selected_options
+            exam_session['answered_questions'].add(question_number)
     else:
         st.info("This question requires selecting 1 answer.")
 
-        selected_option = None
-        for key, value in options.items():
-            button_clicked = st.button(f"{key}. {value}", key=f"{question_number}_{key}")
-            if button_clicked:
-                selected_option = key
-
-                # Save the selected option and validate immediately
-                exam_session['answers'][question_number] = [selected_option]
-                exam_session['answered_questions'].add(question_number)
-
-                if selected_option in correct_answer:
-                    st.success("Correct!")
+        # Check if the question has been answered
+        if question_number in exam_session['answered_questions']:
+            # Display options with feedback
+            for key in option_keys:
+                option_text = f"{key}. {options[key]}"
+                if key == correct_answer[0]:
+                    color = '#d4edda'  # Light green for correct
+                elif key == selected_options[0]:
+                    color = '#f8d7da'  # Light red for incorrect selection
                 else:
-                    st.error(f"Incorrect. The correct answer is: {', '.join(correct_answer)}")
-                st.rerun()
-
-
-
-def display_navigation_controls(session_state, total_questions):
-    """Displays navigation controls for the exam."""
-    st.write("---")
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Previous", key=f"prev_{session_state['current_question']}"):
-            if session_state['current_question'] > 0:
-                session_state['current_question'] -= 1
-                st.rerun()
-    with col2:
-        if st.button("Next", key=f"next_{session_state['current_question']}"):
-            if session_state['current_question'] < total_questions - 1:
-                session_state['current_question'] += 1
-                st.rerun()
+                    color = None
+                if color:
+                    st.markdown(highlight_text(option_text, color), unsafe_allow_html=True)
+                else:
+                    st.write(option_text)
+        else:
+            # Display options as buttons
+            for key in option_keys:
+                option_text = f"{key}. {options[key]}"
+                if st.button(option_text, key=f"option_{question_number}_{key}"):
+                    selected_option = key
+                    exam_session['answers'][question_number] = [selected_option]
+                    exam_session['answered_questions'].add(question_number)
+                    # Provide immediate feedback
+                    if selected_option == correct_answer[0]:
+                        st.success("Correct!")
+                    else:
+                        st.error(f"Incorrect. The correct answer is {correct_answer[0]}. {options[correct_answer[0]]}")
+                    st.rerun()
 
 def display_question_map(session_state, total_questions):
     """Displays a collapsible question map."""

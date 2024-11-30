@@ -37,14 +37,15 @@ def display_question(exam_session, question, selected_options):
     num_correct = len(correct_answer)
     question_number = exam_session['current_question'] + 1
 
-    # Inject conditional CSS for single-answer questions
+    # Apply CSS for single-answer questions
     if num_correct == 1:
         st.markdown(
             """
             <style>
             div.stButton > button {
                 text-align: left !important;
-                margin: 5px 0;
+                display: block !important;
+                margin: 5px 0 !important;
                 width: 100% !important;
             }
             </style>
@@ -115,7 +116,7 @@ def display_question(exam_session, question, selected_options):
             else:
                 st.error(f"Incorrect. The correct answer is: {', '.join(correct_answer)}")
         else:
-            # Display buttons vertically, ensuring left alignment for single-answer questions
+            # Display buttons vertically for single-answer questions
             for key, value in options.items():
                 if st.button(f"{key}. {value}", key=f"option_{question_number}_{key}"):
                     selected_option = key
@@ -126,6 +127,7 @@ def display_question(exam_session, question, selected_options):
                     else:
                         st.error(f"Incorrect. The correct answer is: {', '.join(correct_answer)}")
                     st.rerun()
+
 
 
 def display_navigation_controls(session_state, total_questions):

@@ -23,78 +23,80 @@ def display_question(exam_session, question, selected_options):
     """Displays the question and options, and handles user interactions."""
     st.write("---")
 
-    # Inject custom CSS for styling
-    custom_css = """
-    <style>
-    .question-text {
-        font-size: 18px;
-        font-weight: bold;
-        text-align: left;
-        line-height: 1.5;
-        margin-bottom: 20px;
-        display: block;
-    }
-    .info-banner {
-        background-color: #eaf4ff;
-        padding: 10px;
-        border-radius: 5px;
-        font-size: 14px;
-        margin-bottom: 15px;
-        text-align: left;
-    }
-    .option-button {
-        display: block;
-        width: 100%;
-        text-align: left;
-        padding: 10px;
-        margin: 5px 0;
-        border-radius: 5px;
-        font-size: 16px;
-        border: 1px solid #d1d1d1;
-        background-color: #f9f9f9;
-        transition: background-color 0.3s ease, border-color 0.3s ease;
-    }
-    .option-button:hover {
-        background-color: #e6f7ff; /* Light blue on hover */
-        border-color: #1890ff; /* Highlighted border */
-    }
-    </style>
-    """
-    # Inject CSS into the app
-    st.markdown(custom_css, unsafe_allow_html=True)
-
     # Display the question text
-    question_html = f"""
-    <div class='question-text'>{question['question_text']}</div>
-    """
-    st.markdown(question_html, unsafe_allow_html=True)
-
-    # Display the instruction banner
-    if len(question.get('correct_answer', [])) > 1:
-        st.markdown("<div class='info-banner'>This question requires selecting multiple answers.</div>", unsafe_allow_html=True)
-    else:
-        st.markdown("<div class='info-banner'>This question requires selecting 1 answer.</div>", unsafe_allow_html=True)
+    question_text = question['question_text']
+    st.write(question_text)
 
     # Display the options
     options = question['options']
     option_keys = list(options.keys())
     correct_answer = question.get('correct_answer', [])
-    question_number = exam_session['current_question'] + 1
+    num_correct = len(correct_answer)
 
-    # Display options as buttons
-    for key in option_keys:
-        if st.button(f"{key}. {options[key]}", key=f"option_{question_number}_{key}"):
-            selected_option = key
-            exam_session['answers'][question_number] = [selected_option]
+    question_number = exam_session['current_question'] + 1
+    question_id = str(question['id'])  # Ensure ID is always a string
+
+    # Check if the question has already been answered
+    exam_history = load_exam_history()
+    answered_data = exam_history.get(question_id)
+
+    if num_correct > 1:
+        st.info(f"This question requires selecting {num_correct} answers.")
+        new_selected_options = []
+        for key in option_keys:
+            checkbox_id = f"{question['question_number']}_{key}"
+            checked = key in selected_options
+            option_text = f"{key}. {options[key]}"
+            if st.checkbox(option_text, key=checkbox_id, value=checked):
+                new_selected_options.append(key)
+
+        # Provide feedback if the user has selected the required number of options
+        if len(new_selected_options) == num_correct:
+            correct = set(new_selected_options) == set(correct_answer)
+            save_exam_history(question_id, {"correct": correct, "selected": new_selected_options})
+            exam_session['answers'][question_number] = new_selected_options
             exam_session['answered_questions'].add(question_number)
-            # Provide immediate feedback
-            if selected_option == correct_answer[0]:
+            if correct:
                 st.success("Correct!")
             else:
-                st.error(f"Incorrect. The correct answer is {correct_answer[0]}. {options[correct_answer[0]]}")
-            st.rerun()
+                st.error("Incorrect.")
+                st.markdown("**Correct answer(s):**")
+                for opt in correct_answer:
+                    st.markdown(f"- **{opt}. {question['options'].get(opt, 'Option not found')}**")
+    else:
+        st.info("This question requires selecting 1 answer.")
 
-
+        # If the question is already answered, show feedback
+        if answered_data:
+            selected_option = answered_data['selected'][0]
+            for key in option_keys:
+                option_text = f"{key}. {options[key]}"
+                if key == correct_answer[0]:
+                    color = '#d4edda'  # Light green for correct
+                elif key == selected_option:
+                    color = '#f8d7da'  # Light red for incorrect selection
+                else:
+                    color = None
+                if color:
+                    st.markdown(highlight_text(option_text, color), unsafe_allow_html=True)
+                else:
+                    st.write(option_text)
+        else:
+            # Display options as buttons
+            for key in option_keys:
+                option_text = f"{key}. {options[key]}"
+                if st.button(option_text, key=f"option_{question_number}_{key}"):
+                    selected_option = key
+                    correct = selected_option == correct_answer[0]
+                    save_exam_history(question_id, {"correct": correct, "selected": [selected_option]})
+                    exam_session['answers'][question_number] = [selected_option]
+                    exam_session['answered_questions'].add(question_number)
+                    # Provide immediate feedback
+                    if correct:
+                        st.success("Correct!")
+                    else:
+                        st.error(f"Incorrect. The correct answer is {correct_answer[0]}. {options[correct_answer[0]]}")
+                    st.rerun()
 
 def display_navigation_controls(session_state, total_questions):
     """Displays navigation controls for the exam."""
@@ -124,42 +126,39 @@ def display_question_map(session_state, total_questions):
                 session_state['current_question'] = q_num - 1
                 st.rerun()
 
-def save_exam_history(exam_history):
-    """Saves the exam history to a JSON file."""
+def save_exam_history(question_id, data):
+    """Updates the exam history JSON file with the result for a specific question."""
     try:
+        if os.path.exists('exam_history.json'):
+            with open('exam_history.json', 'r', encoding='utf-8') as f:
+                exam_history = json.load(f)
+        else:
+            exam_history = {}
+
+        exam_history[question_id] = data  # Update the specific question
         with open('exam_history.json', 'w', encoding='utf-8') as f:
-            json.dump(exam_history, f)
+            json.dump(exam_history, f, indent=4)
     except Exception as e:
         st.error(f"Error saving exam history: {e}")
 
+
 def load_exam_history():
-    """Loads the exam history from a JSON file."""
+    """Loads the exam history JSON file."""
     if os.path.exists('exam_history.json'):
         try:
             with open('exam_history.json', 'r', encoding='utf-8') as f:
-                exam_history = json.load(f)
-            # Convert set strings back to sets
-            for ex in exam_history.values():
-                ex['answered_questions'] = set(ex['answered_questions'])
-            return exam_history
+                return json.load(f)
         except Exception as e:
             st.error(f"Error loading exam history: {e}")
             return {}
-    else:
-        return {}
+    return {}
+
 
 def load_used_question_ids():
-    """Loads the set of used question IDs."""
-    if os.path.exists('used_questions.json'):
-        try:
-            with open('used_questions.json', 'r', encoding='utf-8') as f:
-                used_question_ids = set(json.load(f))
-            return used_question_ids
-        except Exception as e:
-            st.error(f"Error loading used questions: {e}")
-            return set()
-    else:
-        return set()
+    """Loads the set of used question IDs from the exam history."""
+    exam_history = load_exam_history()
+    return set(exam_history.keys())
+
 
 def save_used_question_ids(used_question_ids):
     """Saves the set of used question IDs."""

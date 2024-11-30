@@ -32,6 +32,15 @@ def display_question(exam_session, question, selected_options):
         text-align: left;
         line-height: 1.5;
         margin-bottom: 20px;
+        display: block;
+    }
+    .info-banner {
+        background-color: #eaf4ff;
+        padding: 10px;
+        border-radius: 5px;
+        font-size: 14px;
+        margin-bottom: 15px;
+        text-align: left;
     }
     .option-button {
         display: block;
@@ -48,14 +57,6 @@ def display_question(exam_session, question, selected_options):
     .option-button:hover {
         background-color: #e6f7ff; /* Light blue on hover */
         border-color: #1890ff; /* Highlighted border */
-    }
-    .info-banner {
-        background-color: #eaf4ff;
-        padding: 10px;
-        border-radius: 5px;
-        font-size: 14px;
-        margin-bottom: 15px;
-        text-align: left;
     }
     </style>
     """
@@ -82,7 +83,6 @@ def display_question(exam_session, question, selected_options):
 
     # Display options as buttons
     for key in option_keys:
-        option_text = f"<div class='option-button'>{key}. {options[key]}</div>"
         if st.button(f"{key}. {options[key]}", key=f"option_{question_number}_{key}"):
             selected_option = key
             exam_session['answers'][question_number] = [selected_option]
@@ -93,6 +93,7 @@ def display_question(exam_session, question, selected_options):
             else:
                 st.error(f"Incorrect. The correct answer is {correct_answer[0]}. {options[correct_answer[0]]}")
             st.rerun()
+
 
 
 def display_navigation_controls(session_state, total_questions):

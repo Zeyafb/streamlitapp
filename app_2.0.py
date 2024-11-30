@@ -23,72 +23,92 @@ def display_question(exam_session, question, selected_options):
     """Displays the question and options, and handles user interactions."""
     st.write("---")
 
-    # Display the question text
-    question_text = question['question_text']
-    st.write(question_text)
+    # Custom CSS for styling
+    custom_css = """
+    <style>
+    .question-text {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 20px;
+        text-align: left; /* Align text to the left */
+    }
+    .option-button {
+        display: block;
+        width: 100%;
+        text-align: left; /* Align text to the left */
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 5px;
+        font-size: 16px;
+        border: 1px solid #d1d1d1;
+        background-color: #f9f9f9;
+        transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+    .option-button:hover {
+        background-color: #e6f7ff; /* Light blue on hover */
+        border-color: #1890ff; /* Highlighted border */
+    }
+    .info-banner {
+        background-color: #eaf4ff;
+        padding: 10px;
+        border-radius: 5px;
+        font-size: 14px;
+        margin-bottom: 15px;
+        text-align: left;
+    }
+    </style>
+    """
+
+    # Inject custom CSS
+    st.markdown(custom_css, unsafe_allow_html=True)
+
+    # Display the question text with styling
+    question_text = f"<div class='question-text'>{question['question_text']}</div>"
+    st.markdown(question_text, unsafe_allow_html=True)
+
+    # Display the instruction banner
+    if len(question.get('correct_answer', [])) > 1:
+        st.markdown("<div class='info-banner'>This question requires selecting multiple answers.</div>", unsafe_allow_html=True)
+    else:
+        st.markdown("<div class='info-banner'>This question requires selecting 1 answer.</div>", unsafe_allow_html=True)
 
     # Display the options
     options = question['options']
     option_keys = list(options.keys())
     correct_answer = question.get('correct_answer', [])
-    num_correct = len(correct_answer)
 
     question_number = exam_session['current_question'] + 1
-    answer_key = f"answered_{question_number}"
+    question_id = str(question['id'])  # Ensure ID is always a string
 
-    if num_correct > 1:
-        st.info(f"This question requires selecting {num_correct} answers.")
-        new_selected_options = []
+    # Check if the question has already been answered
+    if question_number in exam_session['answered_questions']:
+        selected_option = exam_session['answers'].get(question_number, [None])[0]
         for key in option_keys:
-            checkbox_id = f"{question['question_number']}_{key}"
-            checked = key in selected_options
             option_text = f"{key}. {options[key]}"
-            if st.checkbox(option_text, key=checkbox_id, value=checked):
-                new_selected_options.append(key)
-
-        # Provide feedback if the user has selected the required number of options
-        if len(new_selected_options) == num_correct:
-            if set(new_selected_options) == set(correct_answer):
-                st.success("Correct!")
+            if key == correct_answer[0]:
+                color = '#d4edda'  # Light green for correct
+            elif key == selected_option:
+                color = '#f8d7da'  # Light red for incorrect selection
             else:
-                st.error("Incorrect.")
-                st.markdown("**Correct answer(s):**")
-                for opt in correct_answer:
-                    st.markdown(f"- **{opt}. {question['options'].get(opt, 'Option not found')}**")
-            exam_session['answers'][question_number] = new_selected_options
-            exam_session['answered_questions'].add(question_number)
+                color = None
+            if color:
+                st.markdown(f"<div class='option-button' style='background-color:{color};'>{option_text}</div>", unsafe_allow_html=True)
+            else:
+                st.markdown(f"<div class='option-button'>{option_text}</div>", unsafe_allow_html=True)
     else:
-        st.info("This question requires selecting 1 answer.")
-
-        # Check if the question has been answered
-        if question_number in exam_session['answered_questions']:
-            # Display options with feedback
-            for key in option_keys:
-                option_text = f"{key}. {options[key]}"
-                if key == correct_answer[0]:
-                    color = '#d4edda'  # Light green for correct
-                elif key == selected_options[0]:
-                    color = '#f8d7da'  # Light red for incorrect selection
+        # Display options as buttons
+        for key in option_keys:
+            option_text = f"{key}. {options[key]}"
+            if st.button(option_text, key=f"option_{question_number}_{key}"):
+                selected_option = key
+                exam_session['answers'][question_number] = [selected_option]
+                exam_session['answered_questions'].add(question_number)
+                # Provide immediate feedback
+                if selected_option == correct_answer[0]:
+                    st.success("Correct!")
                 else:
-                    color = None
-                if color:
-                    st.markdown(highlight_text(option_text, color), unsafe_allow_html=True)
-                else:
-                    st.write(option_text)
-        else:
-            # Display options as buttons
-            for key in option_keys:
-                option_text = f"{key}. {options[key]}"
-                if st.button(option_text, key=f"option_{question_number}_{key}"):
-                    selected_option = key
-                    exam_session['answers'][question_number] = [selected_option]
-                    exam_session['answered_questions'].add(question_number)
-                    # Provide immediate feedback
-                    if selected_option == correct_answer[0]:
-                        st.success("Correct!")
-                    else:
-                        st.error(f"Incorrect. The correct answer is {correct_answer[0]}. {options[correct_answer[0]]}")
-                    st.rerun()
+                    st.error(f"Incorrect. The correct answer is {correct_answer[0]}. {options[correct_answer[0]]}")
+                st.rerun()
 
 def display_navigation_controls(session_state, total_questions):
     """Displays navigation controls for the exam."""

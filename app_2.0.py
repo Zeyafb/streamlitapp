@@ -136,10 +136,17 @@ def display_question_map(session_state, total_questions):
 def save_exam_history(exam_history):
     """Saves the exam history to a JSON file."""
     try:
+        serializable_exam_history = {}
+        for eid, ex in exam_history.items():
+            ex_copy = ex.copy()
+            # Convert 'answered_questions' to list
+            ex_copy['answered_questions'] = list(ex_copy['answered_questions'])
+            serializable_exam_history[eid] = ex_copy
         with open('exam_history.json', 'w', encoding='utf-8') as f:
-            json.dump(exam_history, f)
+            json.dump(serializable_exam_history, f)
     except Exception as e:
         st.error(f"Error saving exam history: {e}")
+
 
 def load_exam_history():
     """Loads the exam history from a JSON file."""

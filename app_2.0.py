@@ -81,7 +81,7 @@ def display_question(exam_session, question, selected_options):
                 st.success("Correct!")
             else:
                 st.error(f"Incorrect. The correct answers are: {', '.join(correct_answer)}")
-            st.rerun()
+            st.experimental_rerun()
 
     else:
         st.info("This question requires selecting 1 answer.")
@@ -103,7 +103,7 @@ def display_question(exam_session, question, selected_options):
                 st.success("Correct!")
             else:
                 st.error(f"Incorrect. The correct answer is: {', '.join(correct_answer)}")
-            st.rerun()
+            st.experimental_rerun()
 
 
 def display_navigation_controls(session_state, total_questions):

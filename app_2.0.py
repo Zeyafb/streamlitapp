@@ -193,6 +193,12 @@ def main():
     all_questions = []
     for questions in questions_by_part.values():
         all_questions.extend(questions)
+
+    # Ensure all questions have a unique ID
+    for idx, question in enumerate(all_questions):
+        if 'id' not in question:
+            question['id'] = idx + 1
+
     total_questions_available = len(all_questions)
 
     # Determine remaining questions
@@ -266,6 +272,7 @@ def main():
         display_exam_interface(exam_session)
     else:
         st.write("Click 'Start New Practice Test' in the sidebar to begin.")
+
 
 def display_exam_interface(exam_session):
     """Displays the interface for the exam."""

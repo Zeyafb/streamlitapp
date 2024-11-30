@@ -81,7 +81,7 @@ def display_question(exam_session, question, selected_options):
                 st.success("Correct!")
             else:
                 st.error(f"Incorrect. The correct answers are: {', '.join(correct_answer)}")
-            st.experimental_rerun()
+            st.rerun()
 
     # Logic for single-answer questions
     else:

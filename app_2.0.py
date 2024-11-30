@@ -84,30 +84,35 @@ def display_question(exam_session, question, selected_options):
                 st.success("Correct!")
             else:
                 st.error(f"Incorrect. The correct answers are: {', '.join(correct_answer)}")
-            st.rerun()
+            st.experimental_rerun()
 
     else:
         st.info("This question requires selecting 1 answer.")
 
-        # Radio buttons for single answer selection
-        option_keys = list(options.keys())
-        selected_option = st.radio(
-            "Select your answer:",
-            option_keys,
-            index=option_keys.index(selected_options[0]) if selected_options else 0,
-            format_func=lambda x: f"{x}. {options[x]}",
-            key=f"radio_{question_number}"
-        )
-
-        # Submit button to confirm selection
-        if st.button("Submit Answer"):
-            exam_session['answers'][question_number] = [selected_option]
-            exam_session['answered_questions'].add(question_number)
+        # Check if the question has been answered
+        if question_number in exam_session['answers']:
+            selected_option = exam_session['answers'][question_number][0]
+            # Display selected option and feedback
+            st.write(f"You selected: **{selected_option}. {options[selected_option]}**")
             if selected_option in correct_answer:
                 st.success("Correct!")
             else:
                 st.error(f"Incorrect. The correct answer is: {', '.join(correct_answer)}")
-            st.rerun()
+        else:
+            # Display options as buttons
+            for key, value in options.items():
+                if st.button(f"{key}. {value}", key=f"option_{question_number}_{key}"):
+                    selected_option = key
+                    # Process the selection
+                    exam_session['answers'][question_number] = [selected_option]
+                    exam_session['answered_questions'].add(question_number)
+                    st.write(f"You selected: **{selected_option}. {value}**")
+                    if selected_option in correct_answer:
+                        st.success("Correct!")
+                    else:
+                        st.error(f"Incorrect. The correct answer is: {', '.join(correct_answer)}")
+                    # Rerun to update the interface
+                    st.experimental_rerun()
 
 def display_navigation_controls(session_state, total_questions):
     """Displays navigation controls for the exam."""
@@ -117,12 +122,12 @@ def display_navigation_controls(session_state, total_questions):
         if st.button("Previous", key=f"prev_{session_state['current_question']}"):
             if session_state['current_question'] > 0:
                 session_state['current_question'] -= 1
-                st.rerun()
+                st.experimental_rerun()
     with col2:
         if st.button("Next", key=f"next_{session_state['current_question']}"):
             if session_state['current_question'] < total_questions - 1:
                 session_state['current_question'] += 1
-                st.rerun()
+                st.experimental_rerun()
 
 def display_question_map(session_state, total_questions):
     """Displays a collapsible question map."""
@@ -135,7 +140,7 @@ def display_question_map(session_state, total_questions):
                 label += " ✅"
             if col.button(label, key=f"qmap_{q_num}"):
                 session_state['current_question'] = q_num - 1
-                st.rerun()
+                st.experimental_rerun()
 
 def save_exam_history(exam_history):
     """Saves the exam history to a JSON file."""
@@ -258,7 +263,7 @@ def main():
                 score = ""
             if st.sidebar.button(f"{eid} ({status}) {score}", key=f"history_{eid}"):
                 st.session_state['current_exam'] = eid
-                st.rerun()
+                st.experimental_rerun()
     else:
         st.sidebar.write("No exams taken yet.")
 
@@ -294,7 +299,7 @@ def main():
         st.session_state['exam_history'][exam_id] = exam_session
         st.session_state['current_exam'] = exam_id
         save_exam_history(st.session_state['exam_history'])  # Save to file
-        st.rerun()
+        st.experimental_rerun()
 
     # Display the current exam if one is active
     if 'current_exam' in st.session_state:
@@ -366,7 +371,7 @@ def display_exam_interface(exam_session):
     # Option to go back to exam list
     if st.button("Back to Exam List"):
         del st.session_state['current_exam']
-        st.rerun()
+        st.experimental_rerun()
 
 if __name__ == "__main__":
     main()

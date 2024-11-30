@@ -23,7 +23,10 @@ def display_question(exam_session, question, selected_options):
     """Displays the question and options, and handles user interactions."""
     st.write("---")
 
-# Display the question text
+    # Initialize selected_option
+    selected_option = None
+
+    # Display the question text
     question_text = question['question_text']
     st.markdown(f"<div style='text-align: left; font-size: 18px;'>{question_text}</div>", unsafe_allow_html=True)
 
@@ -37,7 +40,7 @@ def display_question(exam_session, question, selected_options):
     num_correct = len(correct_answer)
     question_number = exam_session['current_question'] + 1
 
-   # Style for buttons
+    # Style for buttons
     button_css = """
     <style>
         .custom-button {
@@ -86,17 +89,18 @@ def display_question(exam_session, question, selected_options):
     else:
         st.info("This question requires selecting 1 answer.")
 
-        # Render options as custom HTML buttons
-        for key, value in options.items():
-            button_html = f"""
-            <button class='custom-button' onClick="window.location.href='/{key}'">{key}. {value}</button>
-            """
-            st.markdown(button_html, unsafe_allow_html=True)
-            if st.session_state.get(f"selected_{question_number}_{key}", False):
-                selected_option = key
+        # Radio buttons for single answer selection
+        option_keys = list(options.keys())
+        selected_option = st.radio(
+            "Select your answer:",
+            option_keys,
+            index=option_keys.index(selected_options[0]) if selected_options else 0,
+            format_func=lambda x: f"{x}. {options[x]}",
+            key=f"radio_{question_number}"
+        )
 
-        # Handle selected option
-        if selected_option:
+        # Submit button to confirm selection
+        if st.button("Submit Answer"):
             exam_session['answers'][question_number] = [selected_option]
             exam_session['answered_questions'].add(question_number)
             if selected_option in correct_answer:
@@ -139,7 +143,7 @@ def save_exam_history(exam_history):
         serializable_exam_history = {}
         for eid, ex in exam_history.items():
             ex_copy = ex.copy()
-            # Convert 'answered_questions' to list
+            # Convert 'answered_questions' set to list
             ex_copy['answered_questions'] = list(ex_copy['answered_questions'])
             serializable_exam_history[eid] = ex_copy
         with open('exam_history.json', 'w', encoding='utf-8') as f:
@@ -147,14 +151,13 @@ def save_exam_history(exam_history):
     except Exception as e:
         st.error(f"Error saving exam history: {e}")
 
-
 def load_exam_history():
     """Loads the exam history from a JSON file."""
     if os.path.exists('exam_history.json'):
         try:
             with open('exam_history.json', 'r', encoding='utf-8') as f:
                 exam_history = json.load(f)
-            # Convert set strings back to sets
+            # Convert 'answered_questions' lists back to sets
             for ex in exam_history.values():
                 ex['answered_questions'] = set(ex['answered_questions'])
             return exam_history
@@ -220,7 +223,6 @@ def main():
             question['origin'] = f"{part_name}, Question {idx + 1}"  # Add origin metadata
             all_questions.append(question)
 
-
     # Ensure all questions have a unique ID
     for idx, question in enumerate(all_questions):
         if 'id' not in question:
@@ -263,6 +265,7 @@ def main():
     # Handle starting a new exam
     if start_exam:
         # Determine number of questions for the exam
+        remaining_questions_count = len(remaining_questions)
         if remaining_questions_count >= 65:
             exam_questions = random.sample(remaining_questions, 65)
         else:
@@ -299,7 +302,6 @@ def main():
         display_exam_interface(exam_session)
     else:
         st.write("Click 'Start New Practice Test' in the sidebar to begin.")
-
 
 def display_exam_interface(exam_session):
     """Displays the interface for the exam."""

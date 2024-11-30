@@ -19,16 +19,18 @@ def navigate_to_question(exam_session, question_number):
     else:
         st.error("No exam is currently active.")
 
+import streamlit as st
+
 def display_question(exam_session, question, selected_options):
     """Displays the question and options, and handles user interactions."""
     st.write("---")
 
     # Display the question text
     question_text = question['question_text']
-    st.markdown(f"<div style='text-align: left;'>{question_text}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='text-align: left; font-size: 18px;'>{question_text}</div>", unsafe_allow_html=True)
 
     # Display the origin of the question
-    question_origin_html = f"<div style='text-align: left;'><em>Source: {question['origin']}</em></div>"
+    question_origin_html = f"<div style='text-align: left; font-style: italic;'>Source: {question['origin']}</div>"
     st.markdown(question_origin_html, unsafe_allow_html=True)
 
     # Display the options
@@ -40,7 +42,6 @@ def display_question(exam_session, question, selected_options):
     question_number = exam_session['current_question'] + 1
     answer_key = f"answered_{question_number}"
 
-
     if num_correct > 1:
         st.info(f"This question requires selecting {num_correct} answers.")
         new_selected_options = []
@@ -48,9 +49,12 @@ def display_question(exam_session, question, selected_options):
             checkbox_id = f"{question['question_number']}_{key}"
             checked = key in selected_options
             option_text = f"{key}. {options[key]}"
+            # Apply left alignment for checkboxes
+            st.markdown(f"<div style='text-align: left; font-size: 16px;'>{option_text}</div>", unsafe_allow_html=True)
             if st.checkbox(option_text, key=checkbox_id, value=checked):
                 new_selected_options.append(key)
 
+        # Provide feedback if the user has selected the required number of options
         if len(new_selected_options) == num_correct:
             if set(new_selected_options) == set(correct_answer):
                 st.success("Correct!")
@@ -58,36 +62,46 @@ def display_question(exam_session, question, selected_options):
                 st.error("Incorrect.")
                 st.markdown("**Correct answer(s):**")
                 for opt in correct_answer:
-                    st.markdown(f"- **{opt}. {options.get(opt, 'Option not found')}**")
+                    st.markdown(f"- **{opt}. {question['options'].get(opt, 'Option not found')}**")
             exam_session['answers'][question_number] = new_selected_options
             exam_session['answered_questions'].add(question_number)
     else:
         st.info("This question requires selecting 1 answer.")
+
+        # Check if the question has been answered
         if question_number in exam_session['answered_questions']:
+            # Display options with feedback
             for key in option_keys:
                 option_text = f"{key}. {options[key]}"
                 if key == correct_answer[0]:
-                    color = '#d4edda'
+                    color = '#d4edda'  # Light green for correct
                 elif key == selected_options[0]:
-                    color = '#f8d7da'
+                    color = '#f8d7da'  # Light red for incorrect selection
                 else:
                     color = None
+                # Highlight selected options
                 if color:
-                    st.markdown(highlight_text(option_text, color), unsafe_allow_html=True)
+                    st.markdown(
+                        f"<div style='background-color: {color}; text-align: left; font-size: 16px;'>{option_text}</div>",
+                        unsafe_allow_html=True,
+                    )
                 else:
-                    st.markdown(f"<div style='text-align: left;'>{option_text}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='text-align: left; font-size: 16px;'>{option_text}</div>", unsafe_allow_html=True)
         else:
+            # Display options as buttons
             for key in option_keys:
                 option_text = f"{key}. {options[key]}"
                 if st.button(option_text, key=f"option_{question_number}_{key}"):
                     selected_option = key
                     exam_session['answers'][question_number] = [selected_option]
                     exam_session['answered_questions'].add(question_number)
+                    # Provide immediate feedback
                     if selected_option == correct_answer[0]:
                         st.success("Correct!")
                     else:
                         st.error(f"Incorrect. The correct answer is {correct_answer[0]}. {options[correct_answer[0]]}")
                     st.rerun()
+
 
 def display_navigation_controls(session_state, total_questions):
     """Displays navigation controls for the exam."""

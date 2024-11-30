@@ -80,6 +80,21 @@ def display_question(exam_session, question, selected_options):
     else:
         st.info("This question requires selecting 1 answer.")
 
+        # Inject CSS to force left-aligned buttons
+        st.markdown(
+            """
+            <style>
+            .stButton > button {
+                display: block;
+                text-align: left;
+                margin: 5px 0;
+                width: 100%;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+
         if question_number in exam_session['answers']:
             selected_option = exam_session['answers'][question_number][0]
             for key, value in options.items():
@@ -90,7 +105,6 @@ def display_question(exam_session, question, selected_options):
                     color = 'salmon'
                 else:
                     color = 'white'
-                # Left-aligned styling for single-answer questions
                 st.markdown(f"""
                     <div style='background-color: {color}; padding: 10px; border-radius:5px; text-align: left;'>
                         {option_text}

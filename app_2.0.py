@@ -146,15 +146,19 @@ def display_question(exam_session, question, selected_options):
 
     # Navigation buttons
     col1, col2, col3 = st.columns([1, 1, 1])
+    
     with col1:
         st.markdown('<div class="navigation-button">', unsafe_allow_html=True)
-        st.button("Previous")
+        st.button("Previous", key="button_previous")
+    
     with col2:
         st.markdown('<div class="navigation-button">', unsafe_allow_html=True)
-        st.button("Next")
+        st.button("Next", key="button_next")
+    
     with col3:
         st.markdown('<div class="navigation-button">', unsafe_allow_html=True)
-        st.button("Back to Exam List")
+        st.button("Back to Exam List", key="button_back_to_list")
+
 
 
 

@@ -7,43 +7,35 @@ import streamlit as st
 # Set default layout to wide mode
 st.set_page_config(layout="wide")
 
-def highlight_text(text, phrases):
-    """Highlights a list of phrases within the given text."""
-    if not phrases:
-        return text
-    # Escape and join phrases into a single regex pattern
-    escaped_phrases = [re.escape(phrase) for phrase in phrases]
-    pattern = '|'.join(escaped_phrases)
-    highlighted_text = re.sub(
-        f"({pattern})",
-        r"<mark>\1</mark>",
-        text,
-        flags=re.IGNORECASE
-    )
-    return highlighted_text
+def highlight_text(text, color):
+    """Wraps the text in HTML to highlight it with the given color."""
+    return f"<div style='background-color: {color}; padding: 5px'>{text}</div>"
 
 def navigate_to_question(exam_session, question_number):
     """Navigates to a specific question in the exam."""
     if exam_session:
         exam_session['current_question'] = question_number - 1
-        st.rerun()
+        st.experimental_rerun()
     else:
         st.error("No exam is currently active.")
 
-def display_question(question, selected_options):
-    """Displays the question and options, and returns updated selected options."""
+def display_question(exam_session, question, selected_options):
+    """Displays the question and options, and handles user interactions."""
     st.write("---")
-    
+
     # Display the question text
     question_text = question['question_text']
     st.write(question_text)
-    
+
     # Display the options
     options = question['options']
     option_keys = list(options.keys())
     correct_answer = question.get('correct_answer', [])
     num_correct = len(correct_answer)
-    
+
+    question_number = exam_session['current_question'] + 1
+    answer_key = f"answered_{question_number}"
+
     if num_correct > 1:
         st.info(f"This question requires selecting {num_correct} answers.")
         new_selected_options = []
@@ -53,26 +45,50 @@ def display_question(question, selected_options):
             option_text = f"{key}. {options[key]}"
             if st.checkbox(option_text, key=checkbox_id, value=checked):
                 new_selected_options.append(key)
-        return new_selected_options
+
+        # Provide feedback if the user has selected the required number of options
+        if len(new_selected_options) == num_correct:
+            if set(new_selected_options) == set(correct_answer):
+                st.success("Correct!")
+            else:
+                st.error("Incorrect.")
+                st.markdown("**Correct answer(s):**")
+                for opt in correct_answer:
+                    st.markdown(f"- **{opt}. {question['options'].get(opt, 'Option not found')}**")
+            exam_session['answers'][question_number] = new_selected_options
+            exam_session['answered_questions'].add(question_number)
     else:
         st.info("This question requires selecting 1 answer.")
-        radio_id = f"{question['question_number']}"
-        options_list = [f"{key}. {options[key]}" for key in option_keys]
-        if selected_options and selected_options[0] in option_keys:
-            index = option_keys.index(selected_options[0])
+
+        # Check if the question has been answered
+        if question_number in exam_session['answered_questions']:
+            # Display options with feedback
+            for key in option_keys:
+                option_text = f"{key}. {options[key]}"
+                if key == correct_answer[0]:
+                    color = '#d4edda'  # Light green for correct
+                elif key == selected_options[0]:
+                    color = '#f8d7da'  # Light red for incorrect selection
+                else:
+                    color = None
+                if color:
+                    st.markdown(highlight_text(option_text, color), unsafe_allow_html=True)
+                else:
+                    st.write(option_text)
         else:
-            index = None  # No option selected
-        selected_option = st.radio(
-            "Select your answer:",
-            options_list,
-            index=index,
-            key=radio_id
-        )
-        if selected_option:
-            selected_letter = selected_option.split('.')[0]
-            return [selected_letter]
-        else:
-            return []
+            # Display options as buttons
+            for key in option_keys:
+                option_text = f"{key}. {options[key]}"
+                if st.button(option_text, key=f"option_{question_number}_{key}"):
+                    selected_option = key
+                    exam_session['answers'][question_number] = [selected_option]
+                    exam_session['answered_questions'].add(question_number)
+                    # Provide immediate feedback
+                    if selected_option == correct_answer[0]:
+                        st.success("Correct!")
+                    else:
+                        st.error(f"Incorrect. The correct answer is {correct_answer[0]}. {options[correct_answer[0]]}")
+                    st.experimental_rerun()
 
 def display_navigation_controls(session_state, total_questions):
     """Displays navigation controls for the exam."""
@@ -82,12 +98,12 @@ def display_navigation_controls(session_state, total_questions):
         if st.button("Previous", key=f"prev_{session_state['current_question']}"):
             if session_state['current_question'] > 0:
                 session_state['current_question'] -= 1
-                st.rerun()
+                st.experimental_rerun()
     with col2:
         if st.button("Next", key=f"next_{session_state['current_question']}"):
             if session_state['current_question'] < total_questions - 1:
                 session_state['current_question'] += 1
-                st.rerun()
+                st.experimental_rerun()
 
 def display_question_map(session_state, total_questions):
     """Displays a collapsible question map."""
@@ -96,9 +112,11 @@ def display_question_map(session_state, total_questions):
         for i, q_num in enumerate(range(1, total_questions + 1)):
             col = cols[i % 10]
             label = f"{q_num}"
+            if q_num in session_state['answered_questions']:
+                label += " ✅"
             if col.button(label, key=f"qmap_{q_num}"):
                 session_state['current_question'] = q_num - 1
-                st.rerun()
+                st.experimental_rerun()
 
 def save_exam_history(exam_history):
     """Saves the exam history to a JSON file."""
@@ -114,7 +132,9 @@ def load_exam_history():
         try:
             with open('exam_history.json', 'r', encoding='utf-8') as f:
                 exam_history = json.load(f)
-            # Convert keys back to integers if necessary
+            # Convert set strings back to sets
+            for ex in exam_history.values():
+                ex['answered_questions'] = set(ex['answered_questions'])
             return exam_history
         except Exception as e:
             st.error(f"Error loading exam history: {e}")
@@ -122,12 +142,37 @@ def load_exam_history():
     else:
         return {}
 
+def load_used_question_ids():
+    """Loads the set of used question IDs."""
+    if os.path.exists('used_questions.json'):
+        try:
+            with open('used_questions.json', 'r', encoding='utf-8') as f:
+                used_question_ids = set(json.load(f))
+            return used_question_ids
+        except Exception as e:
+            st.error(f"Error loading used questions: {e}")
+            return set()
+    else:
+        return set()
+
+def save_used_question_ids(used_question_ids):
+    """Saves the set of used question IDs."""
+    try:
+        with open('used_questions.json', 'w', encoding='utf-8') as f:
+            json.dump(list(used_question_ids), f)
+    except Exception as e:
+        st.error(f"Error saving used questions: {e}")
+
 def main():
     st.title("Practice Exam Simulator")
 
     # Load exam history from file
     if 'exam_history' not in st.session_state:
         st.session_state['exam_history'] = load_exam_history()
+
+    # Load used question IDs
+    if 'used_question_ids' not in st.session_state:
+        st.session_state['used_question_ids'] = load_used_question_ids()
 
     # Load questions
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -148,122 +193,64 @@ def main():
     all_questions = []
     for questions in questions_by_part.values():
         all_questions.extend(questions)
-    if len(all_questions) < 65:
-        st.error("Not enough questions available to generate a 65-question exam.")
-        return
+    total_questions_available = len(all_questions)
+
+    # Determine remaining questions
+    remaining_questions = [q for q in all_questions if q['id'] not in st.session_state['used_question_ids']]
+    remaining_questions_count = len(remaining_questions)
 
     # Sidebar - Start New Exam
     st.sidebar.header("Start a New Practice Test")
+    if remaining_questions_count == 0:
+        st.sidebar.write("All questions have been used.")
+        st.sidebar.write("Resetting question pool.")
+        # Reset used questions
+        st.session_state['used_question_ids'] = set()
+        save_used_question_ids(st.session_state['used_question_ids'])
+        remaining_questions = all_questions
+        remaining_questions_count = len(remaining_questions)
+
     start_exam = st.sidebar.button("Start New Practice Test", key='start_exam')
 
-    # Sidebar - Exam History with Keyword Search
+    # Sidebar - Exam History
     st.sidebar.header("Exam History")
-
-    # Search box
-    exam_search_query = st.sidebar.text_input("Search Exams", key='search_exams')
-
-    # Filter exams based on search query in exam content
-    filtered_exams = {}
-    for eid, ex in st.session_state['exam_history'].items():
-        exam_matches = False
-        # Check if search_query matches exam ID
-        if exam_search_query.lower() in eid.lower():
-            exam_matches = True
-        else:
-            # Search within questions and answers
-            for q in ex['questions']:
-                if exam_search_query.lower() in q['question_text'].lower():
-                    exam_matches = True
-                    break
-                for opt_key, opt_text in q['options'].items():
-                    if exam_search_query.lower() in opt_text.lower():
-                        exam_matches = True
-                        break
-                if exam_matches:
-                    break
-        if exam_matches:
-            filtered_exams[eid] = ex
-
-    # Display filtered exams
-    if filtered_exams:
-        for eid, ex in filtered_exams.items():
+    if st.session_state['exam_history']:
+        for eid, ex in st.session_state['exam_history'].items():
             status = 'Completed' if ex['completed'] else 'In Progress'
-            if st.sidebar.button(f"{eid} ({status})", key=f"history_{eid}"):
+            if ex['completed']:
+                score = f"Score: {ex['score']:.2f}%"
+            else:
+                score = ""
+            if st.sidebar.button(f"{eid} ({status}) {score}", key=f"history_{eid}"):
                 st.session_state['current_exam'] = eid
-                st.rerun()
+                st.experimental_rerun()
     else:
-        st.sidebar.write("No exams found.")
-
-    # Search functionality for all questions
-    st.sidebar.header("Search Questions")
-    search_query = st.sidebar.text_input("Enter a keyword or phrase to search:", key='question_search_query')
-
-    search_results = []
-    total_instances = 0
-
-    if search_query:
-        for part_name_search, questions in questions_by_part.items():
-            for question in questions:
-                question_text_occurrences = len(re.findall(re.escape(search_query), question['question_text'], re.IGNORECASE))
-                option_occurrences = sum(
-                    len(re.findall(re.escape(search_query), option_text, re.IGNORECASE))
-                    for option_text in question['options'].values()
-                )
-                occurrences_in_question = question_text_occurrences + option_occurrences
-
-                if occurrences_in_question > 0:
-                    total_instances += occurrences_in_question
-                    highlighted_question_text = highlight_text(question['question_text'], [search_query])
-                    highlighted_options = {opt_key: highlight_text(opt_text, [search_query]) for opt_key, opt_text in question['options'].items()}
-
-                    search_results.append({
-                        'part_name': part_name_search,
-                        'question_number': question['question_number'],
-                        'question_text': highlighted_question_text,
-                        'options': highlighted_options,
-                        'question_data': question  # Include full question data for navigation
-                    })
-
-        st.sidebar.write(f"Found {len(search_results)} questions relating to '{search_query}'")
-        st.sidebar.write(f"There are {total_instances} instances of '{search_query}'")
-
-    if search_results:
-        st.subheader("Search Results")
-        for result in search_results:
-            st.markdown(f"**Part:** {result['part_name']}, **Question {result['question_number']}**", unsafe_allow_html=True)
-            st.markdown(result['question_text'], unsafe_allow_html=True)
-
-            for option, option_text in result['options'].items():
-                st.markdown(f"- **{option}**: {option_text}", unsafe_allow_html=True)
-
-            if st.button(f"Go to Question {result['question_number']} in Current Exam", key=f"nav_{result['question_number']}"):
-                if 'current_exam' in st.session_state:
-                    exam_session = st.session_state['exam_history'][st.session_state['current_exam']]
-                    # Find the question in the current exam
-                    for idx, q in enumerate(exam_session['questions']):
-                        if q['question_text'] == result['question_data']['question_text']:
-                            navigate_to_question(exam_session, idx + 1)
-                            break
-                    else:
-                        st.error("Question not found in current exam.")
-                else:
-                    st.error("No exam is currently active. Please start a new exam first.")
-
-            st.markdown("---")
+        st.sidebar.write("No exams taken yet.")
 
     # Handle starting a new exam
     if start_exam:
-        # Generate a new random exam
-        random_questions = random.sample(all_questions, 65)
+        # Determine number of questions for the exam
+        if remaining_questions_count >= 65:
+            exam_questions = random.sample(remaining_questions, 65)
+        else:
+            exam_questions = remaining_questions
+            st.warning(f"Only {remaining_questions_count} questions remaining. This exam will have {remaining_questions_count} questions.")
+
         # Assign sequential question numbers
-        for idx, question in enumerate(random_questions):
+        for idx, question in enumerate(exam_questions):
             question['question_number'] = idx + 1
+
+        # Update used questions
+        st.session_state['used_question_ids'].update(q['id'] for q in exam_questions)
+        save_used_question_ids(st.session_state['used_question_ids'])
+
         exam_id = f"Exam_{len(st.session_state['exam_history']) + 1}"
         exam_session = {
             'exam_id': exam_id,
-            'questions': random_questions,
+            'questions': exam_questions,
             'current_question': 0,
             'answers': {},
+            'answered_questions': set(),
             'completed': False,
             'score': None,
         }
@@ -271,13 +258,13 @@ def main():
         st.session_state['exam_history'][exam_id] = exam_session
         st.session_state['current_exam'] = exam_id
         save_exam_history(st.session_state['exam_history'])  # Save to file
-        st.rerun()
+        st.experimental_rerun()
 
-    # Display the current exam if one is active and not searching
-    if 'current_exam' in st.session_state and not search_query:
+    # Display the current exam if one is active
+    if 'current_exam' in st.session_state:
         exam_session = st.session_state['exam_history'][st.session_state['current_exam']]
         display_exam_interface(exam_session)
-    elif not search_query:
+    else:
         st.write("Click 'Start New Practice Test' in the sidebar to begin.")
 
 def display_exam_interface(exam_session):
@@ -293,30 +280,30 @@ def display_exam_interface(exam_session):
     # Display question map
     display_question_map(exam, total_questions)
 
-    # Display question and get updated selected options
+    # Get selected options
     selected_options = exam['answers'].get(question_number, [])
-    new_selected_options = display_question(question, selected_options)
-    exam['answers'][question_number] = new_selected_options
+    display_question(exam_session, question, selected_options)
 
     # Navigation controls
     display_navigation_controls(exam, total_questions)
 
-    # Submit Exam functionality
-    if not exam['completed'] and st.button("Submit Exam"):
-        # Grade the exam
-        correct_count = 0
-        for idx, q in enumerate(questions):
-            q_num = idx + 1
-            selected_options = exam['answers'].get(q_num, [])
-            correct_answer = q.get('correct_answer', [])
-            if set(selected_options) == set(correct_answer):
-                correct_count += 1
-        score = correct_count / total_questions * 100
-        exam['score'] = score
-        exam['completed'] = True
-        st.success(f"You scored {correct_count} out of {total_questions} ({score:.2f}%)")
-        st.session_state['exam_history'][exam['exam_id']] = exam
-        save_exam_history(st.session_state['exam_history'])  # Save to file
+    # Check if all questions have been answered
+    if len(exam['answered_questions']) == total_questions and not exam['completed']:
+        if st.button("Submit Exam"):
+            # Grade the exam
+            correct_count = 0
+            for idx, q in enumerate(questions):
+                q_num = idx + 1
+                selected_options = exam['answers'].get(q_num, [])
+                correct_answer = q.get('correct_answer', [])
+                if set(selected_options) == set(correct_answer):
+                    correct_count += 1
+            score = correct_count / total_questions * 100
+            exam['score'] = score
+            exam['completed'] = True
+            st.success(f"You scored {correct_count} out of {total_questions} ({score:.2f}%)")
+            st.session_state['exam_history'][exam['exam_id']] = exam
+            save_exam_history(st.session_state['exam_history'])  # Save to file
 
     if exam['completed']:
         st.success(f"Exam completed. Your score: {exam['score']:.2f}%")
@@ -343,7 +330,7 @@ def display_exam_interface(exam_session):
     # Option to go back to exam list
     if st.button("Back to Exam List"):
         del st.session_state['current_exam']
-        st.rerun()
+        st.experimental_rerun()
 
 if __name__ == "__main__":
     main()

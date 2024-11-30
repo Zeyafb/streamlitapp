@@ -118,13 +118,21 @@ def display_question_map(session_state, total_questions):
                 session_state['current_question'] = q_num - 1
                 st.rerun()
 
-def save_exam_history(exam_history):
-    """Saves the exam history to a JSON file."""
+def save_exam_history(question_id, data):
+    """Updates the exam history JSON file with the result for a specific question."""
     try:
+        if os.path.exists('exam_history.json'):
+            with open('exam_history.json', 'r', encoding='utf-8') as f:
+                exam_history = json.load(f)
+        else:
+            exam_history = {}
+
+        exam_history[question_id] = data  # Update the specific question
         with open('exam_history.json', 'w', encoding='utf-8') as f:
-            json.dump(exam_history, f)
+            json.dump(exam_history, f, indent=4)
     except Exception as e:
         st.error(f"Error saving exam history: {e}")
+
 
 def load_exam_history():
     """Loads the exam history from a JSON file."""

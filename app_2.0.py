@@ -26,7 +26,11 @@ def display_question(exam_session, question, selected_options):
     # Display the question text
     question_text = question['question_text']
     st.write(question_text)
-
+    # Display the origin of the question
+    question_origin_html = f"""
+    <div class='question-origin'>Source: {question['origin']}</div>
+    """
+    st.markdown(question_origin_html, unsafe_allow_html=True)
     # Display the options
     options = question['options']
     option_keys = list(options.keys())
@@ -191,8 +195,13 @@ def main():
 
     # Combine all questions from all parts
     all_questions = []
-    for questions in questions_by_part.values():
-        all_questions.extend(questions)
+    for part_name, questions in questions_by_part.items():
+        for idx, question in enumerate(questions):
+            if 'id' not in question:
+                question['id'] = len(all_questions) + 1  # Ensure unique ID
+            question['origin'] = f"{part_name}, Question {idx + 1}"  # Add origin metadata
+            all_questions.append(question)
+
 
     # Ensure all questions have a unique ID
     for idx, question in enumerate(all_questions):

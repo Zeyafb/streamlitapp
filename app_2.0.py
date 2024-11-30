@@ -42,33 +42,24 @@ def display_question(exam_session, question, selected_options):
         st.info(f"This question requires selecting {num_correct} answers.")
         new_selected_options = []
 
-        # Check if the question has been answered
         if question_number in exam_session['answers']:
-            # Question has been answered
             selected_options = exam_session['answers'][question_number]
-            # Display options with feedback
             for key, value in options.items():
                 option_text = f"{key}. {value}"
                 if key in correct_answer and key in selected_options:
-                    # Correctly selected
                     color = 'lightgreen'
                 elif key in correct_answer:
-                    # Correct option not selected
                     color = 'lightgreen'
                 elif key in selected_options:
-                    # Incorrectly selected
                     color = 'salmon'
                 else:
                     color = 'white'
                 st.markdown(f"<div style='background-color: {color}; padding: 10px; border-radius:5px'>{option_text}</div>", unsafe_allow_html=True)
-            # Display feedback
             if set(selected_options) == set(correct_answer):
                 st.success("Correct!")
             else:
                 st.error(f"Incorrect. The correct answers are: {', '.join(correct_answer)}")
         else:
-            # Question not answered yet
-            # Checkboxes for each option
             for key, value in options.items():
                 checkbox_id = f"{question_number}_{key}"
                 checked = key in selected_options
@@ -78,11 +69,9 @@ def display_question(exam_session, question, selected_options):
                 else:
                     if key in new_selected_options:
                         new_selected_options.remove(key)
-            # Submit button to confirm selection
             if st.button("Submit Answer"):
                 exam_session['answers'][question_number] = new_selected_options
                 exam_session['answered_questions'].add(question_number)
-                # Validate answers
                 if set(new_selected_options) == set(correct_answer):
                     st.success("Correct!")
                 else:
@@ -91,42 +80,34 @@ def display_question(exam_session, question, selected_options):
     else:
         st.info("This question requires selecting 1 answer.")
 
-        # Check if the question has been answered
         if question_number in exam_session['answers']:
             selected_option = exam_session['answers'][question_number][0]
-            # Display options with feedback
             for key, value in options.items():
                 option_text = f"{key}. {value}"
                 if key in correct_answer:
-                    # Correct answer
                     color = 'lightgreen'
                 elif key == selected_option:
-                    # Selected wrong answer
                     color = 'salmon'
                 else:
                     color = 'white'
                 st.markdown(f"<div style='background-color: {color}; padding: 10px; border-radius:5px'>{option_text}</div>", unsafe_allow_html=True)
-            # Display feedback
             if selected_option in correct_answer:
                 st.success("Correct!")
             else:
                 st.error(f"Incorrect. The correct answer is: {', '.join(correct_answer)}")
         else:
-            # Display options as buttons
-            cols = st.columns(len(options))
-            for idx, (key, value) in enumerate(options.items()):
-                if cols[idx].button(f"{key}. {value}", key=f"option_{question_number}_{key}"):
+            # Display buttons vertically
+            for key, value in options.items():
+                if st.button(f"{key}. {value}", key=f"option_{question_number}_{key}"):
                     selected_option = key
-                    # Process the selection
                     exam_session['answers'][question_number] = [selected_option]
                     exam_session['answered_questions'].add(question_number)
-                    # Check if the answer is correct
                     if selected_option in correct_answer:
                         st.success("Correct!")
                     else:
                         st.error(f"Incorrect. The correct answer is: {', '.join(correct_answer)}")
-                    # Rerun to update the interface
                     st.rerun()
+
 
 def display_navigation_controls(session_state, total_questions):
     """Displays navigation controls for the exam."""
